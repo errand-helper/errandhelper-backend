@@ -10,7 +10,7 @@ from django.conf import settings
 from .models import User
 
 class TokenAuthentication(authentication.BaseAuthentication):
-    authentication_header_prefix = "Bearer"
+    authentication_header_prefix = "Token"
 
     def authenticate(self, request):
         request.user = None

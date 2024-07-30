@@ -5,6 +5,7 @@ from django.conf import settings
 from datetime import datetime, timedelta
 import jwt
 
+
 class UserTypes(models.TextChoices):
     CUSTOMER = "CUSTOMER"
     BUSINESS = "BUSINESS"
@@ -40,7 +41,6 @@ class User(AbstractUser):
     last_name = models.CharField(max_length=200)
     id_number = models.CharField(max_length=200,blank=True,null=True)
     user_type = models.CharField(max_length=50, choices=UserTypes.choices,default=UserTypes.CUSTOMER)
-    phone_number = models.CharField(max_length=255,null=True,default=None)
     email = models.CharField(max_length=255, unique=True)
     password = models.CharField(max_length=255)
     is_active = models.BooleanField(default=True)
@@ -69,3 +69,8 @@ class User(AbstractUser):
         )
 
         return token
+    
+    def save(self,*args,**kwargs):
+        if not self.pk:
+            self.user_type = UserTypes.CUSTOMER
+        super().save(*args,**kwargs)

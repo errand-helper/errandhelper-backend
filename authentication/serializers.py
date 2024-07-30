@@ -15,7 +15,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id','first_name','last_name','phone_number','email','password','confirm_password','token']
+        fields = ['id','first_name','last_name','email','password','confirm_password','token']
 
 
     def validate(self,attrs):

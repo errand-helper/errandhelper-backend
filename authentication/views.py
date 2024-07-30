@@ -47,12 +47,13 @@ class LoginView(APIView):
 
         return Response(
             {
-                'user': {
+                # 'user': {
                     'id': validated_data['id'],
                     'email': validated_data['email'],
                     'token': validated_data['token'],
-                },
-                'tokens': validated_data['tokens']
+                    'tokens': validated_data['tokens']
+
+                # },
             },
             status=status.HTTP_200_OK
         )
