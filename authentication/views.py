@@ -21,14 +21,14 @@ class RegisterView(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         # serializer.save()
-        refresh = RefreshToken.for_user(user)
-        # print(refresh)
-        tokens = {
-            'refresh':str(refresh),
-            'access':str(refresh.access_token)
-        }
+        # refresh = RefreshToken.for_user(user)
+        # # print(refresh)
+        # tokens = {
+        #     'refresh':str(refresh),
+        #     'access':str(refresh.access_token)
+        # }
         return Response(
-            {'user':serializer.data,'tokens':tokens}, 
+            {'user':serializer.data}, 
             status=status.HTTP_201_CREATED)
     
     
@@ -45,13 +45,16 @@ class LoginView(APIView):
         # Get the validated data, which includes the tokens
         validated_data = serializer.validated_data
 
+        # print(validated_data)
+
         return Response(
             {
                 # 'user': {
                     'id': validated_data['id'],
                     'email': validated_data['email'],
-                    'token': validated_data['token'],
-                    'tokens': validated_data['tokens']
+                    'access': validated_data['access'],
+                    'refresh': validated_data['refresh'],
+
 
                 # },
             },

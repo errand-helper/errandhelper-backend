@@ -11,11 +11,10 @@ class RegistrationSerializer(serializers.ModelSerializer):
     id = serializers.UUIDField(read_only=True, format='hex')
     password = serializers.CharField(max_length=128,min_length=8,write_only=True, validators=[validate_password])
     confirm_password = serializers.CharField(write_only=True)
-    token = serializers.CharField(max_length=255,read_only=True)
 
     class Meta:
         model = User
-        fields = ['id','first_name','last_name','email','password','confirm_password','token']
+        fields = ['id','first_name','last_name','email','password','confirm_password']
 
 
     def validate(self,attrs):
@@ -56,14 +55,14 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError("This user has been deactivated.")
 
         refresh = RefreshToken.for_user(user)
-        tokens = {
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
-        }
+        # tokens = {
+        #     'refresh': str(refresh),
+        #     'access': str(refresh.access_token),
+        # }
 
         return {
             'id': user.id,
             'email': user.email,
-            'token': tokens['access'],
-            'tokens': tokens
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
         }

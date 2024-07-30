@@ -3,6 +3,10 @@ from rest_framework import serializers
 from profiles.models import Profile
 
 
+# class LocationSerializer(serializers.ModelSerializer):
+
+
+
 
 class ProfileSerializer(serializers.ModelSerializer):
     id = serializers.UUIDField(read_only=True)
@@ -14,6 +18,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     bio = serializers.CharField(required=False,allow_blank=True)
     city = serializers.CharField(required=False,allow_blank=True)
     image = serializers.SerializerMethodField()
+    location = serializers
 
     class Meta:
         model = Profile
