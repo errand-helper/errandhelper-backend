@@ -21,12 +21,12 @@ class Location(models.Model):
 
 class Profile(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, max_length=30)
-    user = models.OneToOneField(User,related_name="user",on_delete=models.CASCADE)
+    user = models.OneToOneField(User,related_name="profile",on_delete=models.CASCADE)
     phone_number = models.CharField(max_length=255,null=True,default=None)
     bio = models.TextField()
     image = models.ImageField(upload_to="images/profiles",null=True)
-    location = models.ForeignKey(Location,related_name="locations",on_delete=models.CASCADE,null=True,blank=True)
-    social_media = models.ForeignKey(SocialMedia,related_name="social_medias",on_delete=models.CASCADE,null=True,blank=True)
+    location = models.ForeignKey(Location,related_name="profiles",on_delete=models.CASCADE,null=True,blank=True)
+    social_media = models.ForeignKey(SocialMedia,related_name="profiles",on_delete=models.CASCADE,null=True,blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -38,3 +38,7 @@ class Profile(models.Model):
     def create_user_profile(sender,instance,created,**kwargs):
         if created:
             Profile.objects.create(user=instance)
+
+    @receiver(post_save, sender=User)
+    def save_user_profile(sender, instance, **kwargs):
+        instance.profile.save()
