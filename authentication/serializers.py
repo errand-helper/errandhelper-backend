@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 
-from authentication.models import User
+from authentication.models import User, UserTypes
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -24,7 +24,10 @@ class RegistrationSerializer(serializers.ModelSerializer):
     
     def create(self,validated_data):
         validated_data.pop('confirm_password')
+        self.user_type = UserTypes.CUSTOMER
         user = User.objects.create_user(**validated_data)
+
+        # print(user)
 
         user.set_password(validated_data['password'])
         user.save()
@@ -66,3 +69,8 @@ class LoginSerializer(serializers.Serializer):
             'refresh': str(refresh),
             'access': str(refresh.access_token),
         }
+    
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["id",'first_name', 'last_name', 'email',"user_type"]
