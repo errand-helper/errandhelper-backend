@@ -1,10 +1,10 @@
 from django.urls import path
 
-from .views import RegisterBusiness
+from .views import RegisterBusiness 
 
 urlpatterns = [
     path('register/', RegisterBusiness.as_view()),
-    # path('login/', LoginBusiness.as_view()),
+    # path('', CategoryListCreateAPIView.as_view()),
 
     # path('profile/', BusinessProfileView.as_view()),
     # path('profile/<str:pk>/', BusinessDetailRetrieveProfile.as_view()),

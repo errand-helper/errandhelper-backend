@@ -1,2 +1,6 @@
 env
 db.sqlite3
+authentication/migrations/
+business/migrations/
+profiles/migrations/
+service/migrations/

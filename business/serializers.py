@@ -43,3 +43,5 @@ class BusinessRegisterSerializer(serializers.ModelSerializer):
 
         business = Business.objects.create(user=user,**validated_data)
         return business
+    
+

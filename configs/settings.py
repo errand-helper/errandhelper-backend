@@ -46,7 +46,8 @@ INSTALLED_APPS = [
 
     'authentication',
     'business',
-    'profiles'
+    'profiles',
+    'service'
 ]
 
 MIDDLEWARE = [
