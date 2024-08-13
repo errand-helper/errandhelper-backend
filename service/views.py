@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework import status,generics
 
 from service.models import Category, Service
-from service.permissions import IsOwnerOfBusinessProfile
+from service.permissions import IsOwnerOfBusinessProfile, IsOwnerOrReadOnly
 
 # from .models import Category
 from .serializers import CategorySerializer, ServiceSerializer
@@ -30,7 +30,7 @@ class CategoryListCreateAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 class CategoryDetailView(APIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated,IsOwnerOrReadOnly)
     serializer_class = CategorySerializer
 
     def get_object(self, pk):
@@ -60,6 +60,11 @@ class ServiceView(APIView):
 
     def post(self,request,format=None):
         serializer = self.serializer_class(data=request.data)
+        user = request.user
+        if user.user_type != 'BUSINESS':
+            return Response({
+                "error":"You don't have permission to add a service"
+            })
         print(request.user)
         if serializer.is_valid():
             serializer.save()
@@ -68,7 +73,7 @@ class ServiceView(APIView):
     
     
 class ServiceDetailView(APIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated,IsOwnerOrReadOnly)
     serializer_class = ServiceSerializer
     def get_object(self,pk):
         try:
