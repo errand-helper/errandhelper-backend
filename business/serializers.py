@@ -16,14 +16,20 @@ class BusinessRegisterSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(write_only=True)
     last_name = serializers.CharField(write_only=True)
     password = serializers.CharField(write_only=True)
+    confirm_password = serializers.CharField(write_only=True)
+
     user = UserSerializer(read_only=True)  # Include user details in the response
 
     class Meta:
         model = Business
         fields = [
-            "id","first_name","last_name","email","password","business_name",
-            "business_name","registration_number","activation_fee","user"
+            "id","first_name","last_name","email","password",'confirm_password',"business_name", "business_name","registration_number","activation_fee","user"
         ]
+
+    def validate(self, attrs):
+        if attrs['password'] != attrs['confirm_password']:
+            raise serializers.ValidationError({"password":"Passwords do not match"})
+        return super().validate(attrs)
 
     def create(self, validated_data):
         user_data = {
@@ -34,6 +40,8 @@ class BusinessRegisterSerializer(serializers.ModelSerializer):
         }
 
         user = User.objects.create_user(**user_data)
+        user.set_password(validated_data['password'])
+
         user.user_type = UserTypes.BUSINESS
         user.save()
 
@@ -42,6 +50,8 @@ class BusinessRegisterSerializer(serializers.ModelSerializer):
         validated_data.pop('last_name')
         validated_data.pop('email')
         validated_data.pop('password')
+        validated_data.pop('confirm_password')
+
 
         business = Business.objects.create(user=user,**validated_data)
         return business
