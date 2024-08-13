@@ -35,6 +35,8 @@ class BusinessRegisterSerializer(serializers.ModelSerializer):
 
         user = User.objects.create_user(**user_data)
         user.user_type = UserTypes.BUSINESS
+        user.save()
+
 
         validated_data.pop('first_name')
         validated_data.pop('last_name')

@@ -1,10 +1,14 @@
 from django.urls import path
 
-from .views import CategoryListCreateAPIView 
+from .views import CategoryDetailView, CategoryListCreateAPIView, ServiceDetailView, ServiceView
 
 urlpatterns = [
     # path('register/', RegisterBusiness.as_view()),
     path('category/', CategoryListCreateAPIView.as_view()),
+    path('category/<str:pk>/', CategoryDetailView.as_view()),
+
+    path('add-service/', ServiceView.as_view()),
+    path('add-service/<str:pk>/', ServiceDetailView.as_view()),
 
 
 
