@@ -11,14 +11,24 @@ class CategorySerializer(serializers.ModelSerializer):
         ]
 
 class ServiceSerializer(serializers.ModelSerializer):
-    category_name = serializers.CharField(source="category.name",read_only=True)
-    category_id = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all(), source='category')
+    # categories = CategorySerializer(many=True, read_only=True)
+    name = serializers.CharField()
+    # business = serializers.CharField(source="business.business_name",read_only=True)
+
+    # category_id = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all(), source='category')
+    categories = CategorySerializer(many=True, read_only=True)
+    category_ids = serializers.PrimaryKeyRelatedField(
+        queryset=Category.objects.all(), write_only=True, many=True
+    )
 
     class Meta:
         model = Service
-        fields = ['id','category_id','category_name','name']
+        fields = ['id','name','category_ids','categories']
 
     def create(self, validated_data):
-        category = validated_data.pop('category')
-        service = Service.objects.create(category=category, **validated_data)
+        # category = validated_data.pop('category')
+        category_ids = validated_data.pop('category_ids')
+        business = validated_data.pop('business')
+        service = Service.objects.create(business=business, **validated_data)
+        service.categories.set(category_ids)
         return service

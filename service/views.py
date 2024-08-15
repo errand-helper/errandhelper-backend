@@ -5,6 +5,7 @@ from rest_framework.permissions import AllowAny,IsAuthenticated,IsAdminUser
 from rest_framework.response import Response
 from rest_framework import status,generics
 
+from business.models import Business
 from service.models import Category, Service
 from service.permissions import IsOwnerOfBusinessProfile, IsOwnerOrReadOnly
 
@@ -49,27 +50,57 @@ class CategoryDetailView(APIView):
 
 
 
+# class ServiceView(APIView):
+#     permission_classes = [IsAuthenticated,IsOwnerOfBusinessProfile] # add is
+#     serializer_class = ServiceSerializer
+
+#     def get(self,request,format=None):
+#         services = Service.objects.all()
+#         serializer = self.serializer_class(services,many=True)
+#         return Response(serializer.data,status=status.HTTP_201_CREATED)
+
+#     def post(self,request,format=None):
+#         serializer = self.serializer_class(data=request.data)
+#         user = request.user
+#         if user.user_type != 'BUSINESS':
+#             return Response({
+#                 "error":"You don't have permission to add a service"
+#             })
+#         print(request.user)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data, status=status.HTTP_201_CREATED)
+#         return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+
 class ServiceView(APIView):
-    permission_classes = [IsAuthenticated,IsOwnerOfBusinessProfile] # add is
+    permission_classes = [IsAuthenticated, IsOwnerOfBusinessProfile]
     serializer_class = ServiceSerializer
 
-    def get(self,request,format=None):
+    def get(self, request, format=None):
         services = Service.objects.all()
-        serializer = self.serializer_class(services,many=True)
-        return Response(serializer.data,status=status.HTTP_201_CREATED)
+        serializer = self.serializer_class(services, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-    def post(self,request,format=None):
-        serializer = self.serializer_class(data=request.data)
+    def post(self, request, format=None):
         user = request.user
         if user.user_type != 'BUSINESS':
             return Response({
-                "error":"You don't have permission to add a service"
-            })
-        print(request.user)
+                "error": "You don't have permission to add a service"
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        try:
+            business = Business.objects.get(user=user)  # Get the business associated with the user
+        except Business.DoesNotExist:
+            return Response({
+                "error": "Business profile not found"
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(business=business)  # Pass the business instance to the serializer
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     
     
 class ServiceDetailView(APIView):
