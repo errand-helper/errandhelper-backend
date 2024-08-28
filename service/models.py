@@ -21,4 +21,4 @@ class Service(models.Model):
     # category = models.ForeignKey(Category,on_delete=models.CASCADE,null=True,blank=True)
     categories = models.ManyToManyField(Category, related_name="services")
 
-    name = models.CharField(max_length=255,unique=True)
+    name = models.CharField(max_length=255)
