@@ -1,21 +1,5 @@
 env
 db.sqlite3
-authentication/migrations/
-authentication/__pycache__/
-authentication/__pycache__/*.pyc
-
-service/__pycache__
-business/migrations/
-business/__pycache__/
-business/migrations/
-
-profiles/migrations/
-profiles/__pycache__/
-profiles/__pycache__/*.pyc
-
-service/migrations/
-service/__pycache__/
-service/__pycache__/*.pyc
 
 
 *.pyc
