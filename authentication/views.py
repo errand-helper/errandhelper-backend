@@ -26,10 +26,8 @@ class RegisterView(APIView):
         # tokens = {
         #     'refresh':str(refresh),
         #     'access':str(refresh.access_token)
-        # }
-        return Response(
-            {'user':serializer.data}, 
-            status=status.HTTP_201_CREATED)
+        # } {'user':serializer.data},
+        return Response("Created successfully",status=status.HTTP_201_CREATED)
     
     
 class LoginView(APIView):

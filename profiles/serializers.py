@@ -65,3 +65,17 @@ class ProfileSerializer(serializers.ModelSerializer):
         
         instance.save()
         return instance
+
+
+class ProfileImageSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Profile
+        fields = ["image"]
+
+    def get_image(self, obj):
+        if obj.image:
+            return obj.image.url
+        return "https://static.productionready.io/images/smiley-cyrus.jpg"
+
