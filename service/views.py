@@ -47,6 +47,11 @@ class CategoryDetailView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request, pk, format=None):
+        category = self.get_object(pk)
+        category.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 
@@ -119,3 +124,16 @@ class ServiceDetailView(APIView):
             serializer.save()
             return Response(serializer.data,status=status.HTTP_200_OK)
         return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request, pk, format=None):
+        service = self.get_object(pk)
+        service.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
+
+    
+class ServiceByBusiness(APIView):
+    def get(self,request,business_id):
+        services = Service.objects.filter(business_id=business_id)
+        serializer = ServiceSerializer(services,many=True)
+        return Response(serializer.data,status=status.HTTP_200_OK)

@@ -1,10 +1,11 @@
 from django.urls import path
 
-from .views import ListBusinesses, RegisterBusiness
+from .views import BusinessDetailView, ListBusinesses, RegisterBusiness
 
 urlpatterns = [
     path('register/', RegisterBusiness.as_view()),
     path('', ListBusinesses.as_view()),
+    path('details/<uuid:user_id>/', BusinessDetailView.as_view(), name='business-detail'),
 
     # path('', CategoryListCreateAPIView.as_view()),
 

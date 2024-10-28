@@ -56,4 +56,9 @@ class BusinessRegisterSerializer(serializers.ModelSerializer):
         business = Business.objects.create(user=user,**validated_data)
         return business
     
+class BusinessRetrieve(serializers.ModelSerializer):
+
+     class Meta:
+        model = Business
+        fields = '__all__'
 

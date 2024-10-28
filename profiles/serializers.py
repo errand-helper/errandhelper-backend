@@ -22,6 +22,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     last_name = serializers.CharField(source="user.last_name", read_only=True)
     email = serializers.EmailField(source="user.email", read_only=True)
     user_type = serializers.CharField(source="user.user_type", read_only=True)
+    user_id = serializers.CharField(source="user.id", read_only=True)
 
     bio = serializers.CharField(required=False, allow_blank=True)
     phone_number = serializers.CharField(required=False, allow_blank=True)
@@ -32,7 +33,7 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Profile
-        fields = ["id", "first_name", "last_name", "email",
+        fields = ["id", "user_id","first_name", "last_name", "email",
                   "phone_number", "bio", "image", "user_type","location","social_media"]
 
     def get_image(self, obj):
