@@ -1,18 +1,9 @@
 from rest_framework import serializers
 
-from profiles.models import Location, Profile, SocialMedia
+from profiles.models import Profile
 
 
-class LocationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Location
-        fields = ["address", "town", "location", "city"]
 
-
-class SocialMediaSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = SocialMedia
-        fields = ["facebook", "twitter", "linkedin", "instagram", "website"]
 
 
 class ProfileSerializer(serializers.ModelSerializer):
@@ -27,14 +18,15 @@ class ProfileSerializer(serializers.ModelSerializer):
     bio = serializers.CharField(required=False, allow_blank=True)
     phone_number = serializers.CharField(required=False, allow_blank=True)
     image = serializers.SerializerMethodField()
-    location = LocationSerializer()
-    social_media = SocialMediaSerializer()
+    # business_name = serializers.CharField(source="user.business.business_name", read_only=True)
+    # location = LocationSerializer()
+    # social_media = SocialMediaSerializer()
 
 
     class Meta:
         model = Profile
         fields = ["id", "user_id","first_name", "last_name", "email",
-                  "phone_number", "bio", "image", "user_type","location","social_media"]
+                  "phone_number", "bio", "image", "user_type"]
 
     def get_image(self, obj):
         if obj.image:
@@ -42,24 +34,24 @@ class ProfileSerializer(serializers.ModelSerializer):
         return "https://static.productionready.io/images/smiley-cyrus.jpg"
 
     def update(self, instance, validated_data):
-        location_data = validated_data.pop('location', None)
-        social_media_data = validated_data.pop('social_media', None)
+        # location_data = validated_data.pop('location', None)
+        # social_media_data = validated_data.pop('social_media', None)
 
-        if location_data:
-            if instance.location:
-                for attr, value in location_data.items():
-                    setattr(instance.location, attr, value)
-                instance.location.save()
-            else:
-                instance.location = Location.objects.create(**location_data)
+        # if location_data:
+        #     if instance.location:
+        #         for attr, value in location_data.items():
+        #             setattr(instance.location, attr, value)
+        #         instance.location.save()
+        #     else:
+        #         instance.location = Location.objects.create(**location_data)
 
-        if social_media_data:
-            if instance.social_media:
-                for attr, value in social_media_data.items():
-                    setattr(instance.social_media, attr, value)
-                instance.social_media.save()
-            else:
-                instance.social_media = SocialMedia.objects.create(**social_media_data)
+        # if social_media_data:
+        #     if instance.social_media:
+        #         for attr, value in social_media_data.items():
+        #             setattr(instance.social_media, attr, value)
+        #         instance.social_media.save()
+        #     else:
+        #         instance.social_media = SocialMedia.objects.create(**social_media_data)
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)

@@ -6,11 +6,12 @@ from django.db import models
 from django.forms import ValidationError
 
 from authentication.models import User
-from business.models import Business
-from profiles.models import Location
-from service.models import Service
+
 from django.utils.translation import gettext_lazy as _
-from django.utils import timezone  # Import Django's timezone utility
+from django.utils import timezone
+
+from business.models import Business, Location
+# from profiles.models import Location  
 
 
 
@@ -55,7 +56,7 @@ class Order(models.Model):
     payment = models.PositiveIntegerField()
     special_instructions = models.TextField()
     paid = models.BooleanField()
-    services = models.ManyToManyField(Service, related_name='orders')
+    # services = models.ManyToManyField(Service, related_name='orders')
     business = models.ForeignKey(Business, on_delete=models.CASCADE)
     user = models.ForeignKey(User,on_delete=models.CASCADE)
     location = models.ForeignKey(Location,on_delete=models.CASCADE)

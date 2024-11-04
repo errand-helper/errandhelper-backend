@@ -40,6 +40,11 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(max_length=128, write_only=True)
     # token = serializers.CharField(max_length=255, read_only=True)
     user_type = serializers.CharField(max_length=255, read_only=True)
+
+    class Meta:
+        model = User
+        fields = ["id", 'email',"user_type"]
+
     def validate(self, data):
         email = data.get('email', None)
         password = data.get('password', None)

@@ -2,12 +2,13 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny,IsAuthenticated,IsAdminUser
 from rest_framework.response import Response
-from rest_framework import status,generics
+from rest_framework import status,generics,viewsets
 
-from business.models import Business
+from business.models import Business, BusinessCategory
+from rest_framework.decorators import action
 
-# from .models import Category
-from .serializers import BusinessRegisterSerializer, BusinessRetrieve
+from .models import Category
+from .serializers import BusinessCategorySerializer, BusinessRegisterSerializer, BusinessRetrieve
 
 # Create your views here.
 
@@ -22,6 +23,19 @@ class RegisterBusiness(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
+class BusinessRetrieveView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = BusinessRegisterSerializer
+
+    def get_object(self):
+        user = self.request.user
+        return Business.objects.get(user=user)
+
+    def retrieve(self, request, *args, **kwargs):
+        business = self.get_object()
+        serializer = self.serializer_class(business)
+        return Response(serializer.data, status=status.HTTP_200_OK) 
     
 
 class BusinessDetailView(APIView):
@@ -58,3 +72,42 @@ class ListBusinesses(APIView):
         serializer = BusinessRegisterSerializer(businesses,many=True)
         return Response(serializer.data,status=status.HTTP_200_OK)
 
+
+class BusinessCategoryCreateView(generics.ListCreateAPIView):
+    queryset = BusinessCategory.objects.all()
+    serializer_class = BusinessCategorySerializer
+
+class BusinessCategoryListView(generics.ListAPIView):
+    queryset = BusinessCategory.objects.all()
+    serializer_class = BusinessCategorySerializer
+
+class BusinessCategoryUpdateView(generics.RetrieveUpdateAPIView):
+    queryset = BusinessCategory.objects.all()
+    serializer_class = BusinessCategorySerializer
+
+
+class BusinessCategoryViewSet(viewsets.ModelViewSet):
+    queryset = BusinessCategory.objects.all()
+    serializer_class = BusinessCategorySerializer
+
+    @action(detail=True, methods=['post'], url_path='remove-category')
+    def remove_category(self, request, pk=None):
+        business_category = self.get_object()
+        category_id = request.data.get('category_id')
+
+        try:
+            # Retrieve the category to remove
+            category = Category.objects.get(id=category_id)
+        except Category.DoesNotExist:
+            return Response(
+                {"error": "Category not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Remove the category from the ManyToMany relationship
+        business_category.categories.remove(category)
+
+        return Response(
+            {"message": "Category removed successfully."},
+            status=status.HTTP_200_OK
+        ) 

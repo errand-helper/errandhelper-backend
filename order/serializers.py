@@ -1,10 +1,11 @@
 from rest_framework import serializers
 
+from business.models import Location
+from business.serializers import LocationSerializer
 from order.models import ActivityTime, Instruction, Order
-from profiles.models import Location
-from profiles.serializers import LocationSerializer
-from service.models import Service
-from service.serializers import ServiceSerializer
+# from profiles.serializers import LocationSerializer
+# from service.models import Service
+# from service.serializers import ServiceSerializer
 
 
 class ActivityTimeSerializer(serializers.ModelSerializer):
@@ -33,7 +34,7 @@ class OrderSerializer(serializers.ModelSerializer):
     instructions = InstructionSerializer(many=True)
     user_details = serializers.SerializerMethodField(read_only=True)
     business_details = serializers.SerializerMethodField(read_only=True)
-    services_details = serializers.SerializerMethodField(read_only=True)
+    # services_details = serializers.SerializerMethodField(read_only=True)
 
     location = LocationSerializer()
     activity_time = ActivityTimeSerializer()
@@ -42,8 +43,8 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = [
             'id', 'reference_number', 'instructions', 'completed', 'accepted', 
-            'payment', 'paid', 'services', 
-            'location', 'activity_time', 'services_details', 'order_status','user_details','business_details'
+            'payment', 'paid', 
+            'location', 'activity_time', 'order_status','user_details','business_details'
         ]
         read_only_fields = ['id', 'reference_number']
 
@@ -58,7 +59,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
         location_data = validated_data.pop('location')
         activity_time_data = validated_data.pop('activity_time')
-        services_data = validated_data.pop('services', None)
+        # services_data = validated_data.pop('services', None)
         instructions_data = validated_data.pop('instructions', None)
 
         # Create location and activity_time instances
@@ -79,13 +80,13 @@ class OrderSerializer(serializers.ModelSerializer):
             Instruction.objects.create(order=order, **instruction_data)
 
         # Set services if provided
-        if services_data:
-            order.services.set(services_data)
+        # if services_data:
+        #     order.services.set(services_data)
 
         return order
     
-    def get_services_details(self, obj):
-        return ServiceSerializer(obj.services.all(), many=True).data
+    # def get_services_details(self, obj):
+    #     return ServiceSerializer(obj.services.all(), many=True).data
     
 
     def get_user_details(self, obj):
