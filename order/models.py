@@ -10,8 +10,8 @@ from authentication.models import User
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 
-from business.models import Business, Location
-# from profiles.models import Location  
+from business.models import Business
+from profiles.models import Location  
 
 
 

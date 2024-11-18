@@ -30,6 +30,7 @@ class BusinessRetrieveView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_object(self):
         user = self.request.user
+        print(user,'sddddddddddddddd')
         return Business.objects.get(user=user)
 
     def retrieve(self, request, *args, **kwargs):

@@ -2,24 +2,17 @@ from rest_framework import serializers
 
 from authentication.models import User,UserTypes
 from authentication.serializers import UserSerializer
+from profiles.models import Location, SocialMedia
 from service.models import Category
 from service.serializers import CategorySerializer
 
-from .models import Business, BusinessCategory, Location, SocialMedia
+from .models import Business, BusinessCategory
 
 
 
 
-class LocationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Location
-        fields = ["address", "town", "location", "city"]
 
 
-class SocialMediaSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = SocialMedia
-        fields = ["facebook", "twitter", "linkedin", "instagram", "website"]
 
 
 class BusinessRegisterSerializer(serializers.ModelSerializer):
@@ -35,13 +28,12 @@ class BusinessRegisterSerializer(serializers.ModelSerializer):
     confirm_password = serializers.CharField(write_only=True)
 
     user = UserSerializer(read_only=True)  # Include user details in the response
-    location = LocationSerializer()
-    social_media = SocialMediaSerializer()
+   
 
     class Meta:
         model = Business
         fields = [
-            "id","first_name","last_name","email","password",'confirm_password',"business_name", "business_name","registration_number","user","location","social_media"
+            "id","first_name","last_name","email","password",'confirm_password',"business_name", "business_name","registration_number","user"
         ]
 
     def validate(self, attrs):
