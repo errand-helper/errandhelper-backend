@@ -6,7 +6,6 @@ on:
   # pull_request:
   #   branches: [ "master" ]
 
-
 jobs:
   publish_images:
     runs-on: ubuntu-latest
@@ -15,8 +14,8 @@ jobs:
     - name: checkout
       uses: actions/checkout@v4
     - name: Build the Docker image
-      run: docker build ./ -t motieno205/errandhelper-backend:latest
+      run: docker build -t "${{secrets.IMAGE_NAME}}":latest .
     - name: push image to docker hub
       run: |
-        docker login -u motieno205 -p ${{ secrets.DOCKER_HUB_TOKEN }}
-        docker push motieno205/errandhelper-backend:latest:latest
+        echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
+        docker push "${{secrets.IMAGE_NAME}}":latest
