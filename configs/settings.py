@@ -101,7 +101,7 @@ DATABASES = {
         'NAME': 'errandhelper',
         'USER': 'admin',
         'PASSWORD': 'Qwerty@123',
-        'HOST': 'db',
+        'HOST': 'errandhelper-db',
         'PORT': '5432',
     }
 }
