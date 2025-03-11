@@ -1,16 +1,4 @@
 services:     
-
-  db:
-    image: postgres
-    volumes:
-      - postgres_data:/var/lib/postgresql/data/
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-    ports:
-      - "5432:5432"
-    
-
   errandhelper-backend:
     build:
       context: ./
@@ -21,15 +9,28 @@ services:
       - "8000:8000"
     volumes:
       - .:/app
-
-    environment:
-      - DATABASE_NAME=postgres
-      - DATABASE_USER=postgres
-      - DATABASE_PASSWORD=postgres  
-      - DATABASE_HOST=db
-      - DATABASE_PORT=5432
     depends_on:
       - db
+    networks:
+      - django_network
+
+  db:
+    image: postgres:17
+    container_name: errandhelper-db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=errandhelper
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=Qwerty@123
+    ports:
+      - "5432:5432"
+    networks:
+      - django_network
 
 volumes:
-      postgres_data:
+  postgres_data:
+
+networks:
+  django_network:
+    driver: bridge
