@@ -100,7 +100,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'errandhelper',
         'USER': 'admin',
-        'PASSWORD': 'Qwerty@123',
+        'PASSWORD': 'Qwerty123',
         'HOST': 'errandhelper-db',
         'PORT': '5432',
     }
