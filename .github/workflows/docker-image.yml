@@ -3,8 +3,8 @@ name: Build and Publish image to Docker Hub
 on:
   push:
     branches: [ "master" ]
-  # pull_request:
-  #   branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
 
 jobs:
   publish_images:
@@ -13,6 +13,10 @@ jobs:
     steps:
     - name: checkout
       uses: actions/checkout@v4
+      
+    - name: Set version number
+      run: echo "VERSION=v1.${{ github.run_number }}" >> $GITHUB_ENV
+
     - name: Build the Docker image
       run: docker build -t "${{secrets.IMAGE_NAME}}":latest .
     - name: push image to docker hub
