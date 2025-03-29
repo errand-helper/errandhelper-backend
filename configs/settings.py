@@ -58,7 +58,9 @@ INSTALLED_APPS = [
     'business',
     'profiles',
     'service',
-    'order'
+    'order',
+    'media_location',
+    'business_profile'
 ]
 
 MIDDLEWARE = [
@@ -95,16 +97,16 @@ WSGI_APPLICATION = 'configs.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'errandhelper',
-        'USER': 'admin',
-        'PASSWORD': 'Qwerty123',
-        'HOST': '172.18.0.2',
-        'PORT': '5432',
-    }
-}
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'errandhelper',
+#         'USER': 'admin',
+#         'PASSWORD': 'Qwerty123',
+#         'HOST': '172.18.0.2',
+#         'PORT': '5432',
+#     }
+# }
 
 # DATABASES = {
 #     'default': {
@@ -117,12 +119,12 @@ DATABASES = {
 #     }
 # }
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
 
 
 # Password validation

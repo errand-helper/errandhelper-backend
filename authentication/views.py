@@ -50,6 +50,7 @@ class LoginView(APIView):
                 # 'user': {
                     'id': validated_data['id'],
                     'email': validated_data['email'],
+                    'user_type': validated_data['user_type'],
                     'access': validated_data['access'],
                     'refresh': validated_data['refresh'],
 

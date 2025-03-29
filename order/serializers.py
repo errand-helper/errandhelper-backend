@@ -2,9 +2,11 @@ from rest_framework import serializers
 
 # from business.models import Location
 # from business.serializers import LocationSerializer
+from media_location.models import Location
+from media_location.serializers import LocationSerializer
 from order.models import ActivityTime, Instruction, Order
-from profiles.models import Location
-from profiles.serializers import LocationSerializer
+# from profiles.models import Location
+# from profiles.serializers import LocationSerializer
 # from profiles.serializers import LocationSerializer
 # from service.models import Service
 # from service.serializers import ServiceSerializer

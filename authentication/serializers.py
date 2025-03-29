@@ -14,7 +14,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id','first_name','last_name','email','password','confirm_password']
+        fields = ['id','first_name','last_name','id_number','email','password','confirm_password']
 
 
     def validate(self,attrs):
@@ -63,11 +63,6 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError("This user has been deactivated.")
 
         refresh = RefreshToken.for_user(user)
-        # tokens = {
-        #     'refresh': str(refresh),
-        #     'access': str(refresh.access_token),
-        # }
-
         return {
             'id': user.id,
             'email': user.email,
@@ -79,4 +74,4 @@ class LoginSerializer(serializers.Serializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id",'first_name', 'last_name', 'email',"user_type"]
+        fields = ["id",'first_name', 'last_name','id_number', 'email',"user_type"]
