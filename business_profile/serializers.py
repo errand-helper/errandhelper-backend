@@ -13,6 +13,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source="user.email", read_only=True)
     user_type = serializers.CharField(source="user.user_type", read_only=True)
     user_id = serializers.CharField(source="user.id", read_only=True)
+    business_id = serializers.CharField(source="business.id", read_only=True)
 
     bio = serializers.CharField(required=False, allow_blank=True)
     phone_number = serializers.CharField(required=False, allow_blank=True)
@@ -23,8 +24,7 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = BusinessProfile
-        fields = ["id", "user_id", "email",
-                  "phone_number", "bio", "image", "user_type", "location", "social_media"]
+        fields = ["id", "user_id", "email","phone_number", "bio", "image", "user_type", "location", "social_media","business_id"]
 
     def get_image(self, obj):
         if obj.image:
@@ -33,6 +33,7 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user = self.context["request"].user
+        business = self.context["request"].business
 
         # Extract nested data
         location_data = validated_data.pop("location", None)
@@ -51,6 +52,7 @@ class ProfileSerializer(serializers.ModelSerializer):
         # Create the business profile
         business_profile = BusinessProfile.objects.create(
             user=user,
+            business=business,
             location=location,
             social_media=social_media,
             **validated_data
@@ -88,6 +90,22 @@ class ProfileSerializer(serializers.ModelSerializer):
 
         instance.save()
         return instance
+    
+
+
+class BusinessProfileMinimalSerializer(serializers.ModelSerializer):
+    # business_name = serializers.CharField(source="business.business_name", read_only=True)
+    business_id = serializers.SerializerMethodField()
+    bio = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = BusinessProfile
+        fields = ["business_id", "bio"]
+
+    def get_business_id(self, obj):
+        return obj.business.name if obj.business else "No Business Assigned"
+
+
 
 
 # class ProfileSerializer(serializers.ModelSerializer):

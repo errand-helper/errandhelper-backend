@@ -3,7 +3,7 @@ from rest_framework.generics import RetrieveUpdateDestroyAPIView
 from rest_framework.permissions import IsAuthenticated
 
 from .models import BusinessProfile
-from .serializers import ProfileSerializer
+from .serializers import BusinessProfileMinimalSerializer, ProfileSerializer
 from rest_framework.response import Response
 from rest_framework import status,generics
 from rest_framework.exceptions import NotFound
@@ -45,3 +45,8 @@ class ProfileUpdateView(generics.UpdateAPIView):
 
     def get_object(self):
         return self.request.user.business_profile
+    
+class BusinessProfileListView(generics.ListAPIView):
+    # permission_classes = [IsAuthenticated]  
+    serializer_class = BusinessProfileMinimalSerializer
+    queryset = BusinessProfile.objects.all()

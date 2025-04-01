@@ -11,7 +11,7 @@ from media_location.models import Location, SocialMedia
 class BusinessProfile(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, max_length=30)
     user = models.OneToOneField(User,related_name="business_profile",on_delete=models.CASCADE)
-    business = models.OneToOneField(Business,related_name="business_profile",on_delete=models.CASCADE,null=True,blank=True)
+    business = models.OneToOneField(Business,related_name="business_profile",on_delete=models.CASCADE)
     is_approved = models.BooleanField(default=False)
     
     phone_number = models.CharField(max_length=255,null=True,default=None)
