@@ -30,10 +30,9 @@ class ProfileSerializer(serializers.ModelSerializer):
         if obj.image:
             return obj.image.url
         return "https://static.productionready.io/images/smiley-cyrus.jpg"
-
+    
     def create(self, validated_data):
         user = self.context["request"].user
-        business = self.context["request"].business
 
         # Extract nested data
         location_data = validated_data.pop("location", None)
@@ -49,6 +48,10 @@ class ProfileSerializer(serializers.ModelSerializer):
         if social_media_data:
             social_media, _ = SocialMedia.objects.get_or_create(**social_media_data)
 
+        # Get a single Business instance associated with the user.
+        # Adjust this based on how your models are related.
+        business = user.business.first()  # Ensure this returns a Business instance.
+
         # Create the business profile
         business_profile = BusinessProfile.objects.create(
             user=user,
@@ -59,6 +62,36 @@ class ProfileSerializer(serializers.ModelSerializer):
         )
 
         return business_profile
+
+
+    # def create(self, validated_data):
+    #     user = self.context["request"].user
+    #     business = self.context["request"].business
+
+    #     # Extract nested data
+    #     location_data = validated_data.pop("location", None)
+    #     social_media_data = validated_data.pop("social_media", None)
+
+    #     # Create or assign location
+    #     location = None
+    #     if location_data:
+    #         location, _ = Location.objects.get_or_create(**location_data)
+
+    #     # Create or assign social media
+    #     social_media = None
+    #     if social_media_data:
+    #         social_media, _ = SocialMedia.objects.get_or_create(**social_media_data)
+
+    #     # Create the business profile
+    #     business_profile = BusinessProfile.objects.create(
+    #         user=user,
+    #         business=business,
+    #         location=location,
+    #         social_media=social_media,
+    #         **validated_data
+    #     )
+
+    #     return business_profile
     
 
     def update(self, instance, validated_data):
@@ -94,16 +127,21 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 
 class BusinessProfileMinimalSerializer(serializers.ModelSerializer):
-    # business_name = serializers.CharField(source="business.business_name", read_only=True)
-    business_id = serializers.SerializerMethodField()
+    business_name = serializers.CharField(source="business.business_name",read_only=True)
+    business_id = serializers.CharField(read_only=True)
     bio = serializers.CharField(read_only=True)
+    phone_number = serializers.CharField(read_only=True)
+    is_approved =  serializers.CharField(read_only=True)
+    image =  serializers.CharField(read_only=True)
+    location = LocationSerializer()
+    email = serializers.EmailField(source="user.email",read_only=True)
 
     class Meta:
         model = BusinessProfile
-        fields = ["business_id", "bio"]
+        fields = ["business_id", "bio","business_name","phone_number","is_approved","image","location","email"]
 
-    def get_business_id(self, obj):
-        return obj.business.name if obj.business else "No Business Assigned"
+    # def get_business_id(self, obj):
+    #     return obj.business_id
 
 
 

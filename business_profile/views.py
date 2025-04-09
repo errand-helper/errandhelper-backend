@@ -10,6 +10,27 @@ from rest_framework.exceptions import NotFound
 from rest_framework.exceptions import ValidationError
 
 # Create your views here.
+# class ProfileRetrieveView(RetrieveUpdateDestroyAPIView):
+#     permission_classes = [IsAuthenticated]
+#     serializer_class = ProfileSerializer
+
+#     def get_object(self):
+#         """Retrieve the BusinessProfile if it exists, else return 404"""
+#         user = self.request.user
+#         try:
+#             return BusinessProfile.objects.get(user=user)
+#         except BusinessProfile.DoesNotExist:
+#             raise NotFound({"detail": "Business profile not found1."})
+
+#     def retrieve(self, request, *args, **kwargs):
+#         """Custom retrieve method to return profile data if it exists"""
+#         try:
+#             profile = self.get_object()
+#             serializer = self.serializer_class(profile)
+#             return Response(serializer.data, status=status.HTTP_200_OK)
+#         except NotFound as e:
+#             return Response({"detail": "Business profile not found2."},status=status.HTTP_404_NOT_FOUND)
+
 class ProfileRetrieveView(RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = ProfileSerializer
@@ -20,16 +41,24 @@ class ProfileRetrieveView(RetrieveUpdateDestroyAPIView):
         try:
             return BusinessProfile.objects.get(user=user)
         except BusinessProfile.DoesNotExist:
-            raise NotFound({"detail": "Business profile not found."})
+            raise NotFound({"detail": "Business profile not found1."})
 
     def retrieve(self, request, *args, **kwargs):
-        """Custom retrieve method to return profile data if it exists"""
+        """Custom retrieve method to return profile data if it exists, or email if not"""
         try:
             profile = self.get_object()
             serializer = self.serializer_class(profile)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except NotFound as e:
-            return Response({"detail": "Business profile not found."},status=status.HTTP_404_NOT_FOUND)
+            # Return the user's email when profile is not found
+            return Response(
+                {
+                    "email": request.user.email,
+                    "user_type": request.user.user_type,
+                    # "image": request.business_profile.image
+                },
+                status=status.HTTP_200_OK
+            )
 
 class ProfileCreateView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated]
@@ -47,6 +76,5 @@ class ProfileUpdateView(generics.UpdateAPIView):
         return self.request.user.business_profile
     
 class BusinessProfileListView(generics.ListAPIView):
-    # permission_classes = [IsAuthenticated]  
     serializer_class = BusinessProfileMinimalSerializer
-    queryset = BusinessProfile.objects.all()
+    queryset = BusinessProfile.objects.filter(is_approved=True)
