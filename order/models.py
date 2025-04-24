@@ -11,7 +11,7 @@ from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 
 from business.models import Business
-from profiles.models import Location  
+from media_location.models import Location
 
 
 

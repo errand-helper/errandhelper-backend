@@ -39,7 +39,7 @@ class User(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, max_length=30)
     first_name = models.CharField(max_length=200)
     last_name = models.CharField(max_length=200)
-    id_number = models.CharField(max_length=200,blank=True,null=True)
+    id_number = models.CharField(max_length=200)
     user_type = models.CharField(max_length=50, choices=UserTypes.choices,default=UserTypes.CUSTOMER)
     email = models.CharField(max_length=255, unique=True)
     password = models.CharField(max_length=255)

@@ -13,8 +13,10 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 import os
 from pathlib import Path
 from datetime import timedelta
-
 from django.conf import settings
+from dotenv import load_dotenv
+
+# Load environment variables - Docker will use env files specified in docker-compose.yaml
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -24,14 +26,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-ga3*ab=1e_jxq#^u5uvfdgrud=q+n6*6d9f*ah*ibhrin1a*t@'
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS","127.0.0.1").split(",")
 
-CORS_ORIGIN_ALLOW_ALL=True
+CSRF_TRUSTED_ORIGINS = os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS","https://127.0.0.1").split(",")
+
+
+# CORS_ORIGIN_ALLOW_ALL=True
 
 # CORS_ORIGIN_WHITELIST = [
 #     'http://google.com',
@@ -58,7 +63,9 @@ INSTALLED_APPS = [
     'business',
     'profiles',
     'service',
-    'order'
+    'order',
+    'media_location',
+    'business_profile'
 ]
 
 MIDDLEWARE = [
@@ -96,26 +103,18 @@ WSGI_APPLICATION = 'configs.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'errandhelper',
-        'USER': 'admin',
-        'PASSWORD': 'Qwerty123',
-        'HOST': '172.18.0.2',
-        'PORT': '5432',
-    }
+     'default': {
+         'ENGINE': 'django.db.backends.{}'.format(
+             os.getenv('DATABASE_ENGINE', 'sqlite3')
+         ),
+         'NAME': os.getenv('DATABASE_NAME', 'polls'),
+         'USER': os.getenv('DATABASE_USER', 'myprojectuser'),
+         'PASSWORD': os.getenv('DATABASE_PASSWORD', 'password'),
+         'HOST': os.getenv('DATABASE_HOST', '127.0.0.1'),
+         'PORT': os.getenv('DATABASE_PORT', 5432),
+     }
 }
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': os.getenv('DATABASE_NAME', 'postgres'),
-#         'USER': os.getenv('DATABASE_USER', 'postgres'),
-#         'PASSWORD': os.getenv('DATABASE_PASSWORD', 'postgres'),
-#         'HOST': os.getenv('DATABASE_HOST', '127.0.0.1'),
-#         'PORT': os.getenv('DATABASE_PORT', '5432'),
-#     }
-# }
 
 # DATABASES = {
 #     'default': {
@@ -160,6 +159,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field

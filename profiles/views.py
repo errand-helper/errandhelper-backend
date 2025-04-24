@@ -21,17 +21,17 @@ class ProfileRetrieveView(RetrieveUpdateDestroyAPIView):
         serializer = self.serializer_class(profile)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
-    def destroy(self, request, *args, **kwargs):
-        profile = self.get_object()
-        user = profile.user
-        # Check and delete related objects if they exist
-        if profile.location:
-            profile.location.delete()
-        if profile.social_media:
-            profile.social_media.delete()
-        profile.delete()
-        user.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+    # def destroy(self, request, *args, **kwargs):
+    #     profile = self.get_object()
+    #     user = profile.user
+    #     # Check and delete related objects if they exist
+    #     if profile.location:
+    #         profile.location.delete()
+    #     if profile.social_media:
+    #         profile.social_media.delete()
+    #     profile.delete()
+    #     user.delete()
+    #     return Response(status=status.HTTP_204_NO_CONTENT)
     
 
 class ProfileImageView(RetrieveAPIView):

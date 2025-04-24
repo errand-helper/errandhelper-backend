@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from authentication.models import User,UserTypes
 from authentication.serializers import UserSerializer
-from profiles.models import Location, SocialMedia
+# from profiles.models import Location, SocialMedia
 from service.models import Category
 from service.serializers import CategorySerializer
 
@@ -23,6 +23,7 @@ class BusinessRegisterSerializer(serializers.ModelSerializer):
 
     email = serializers.EmailField(write_only=True)
     first_name = serializers.CharField(write_only=True)
+    id_number = serializers.CharField(write_only=True)
     last_name = serializers.CharField(write_only=True)
     password = serializers.CharField(write_only=True)
     confirm_password = serializers.CharField(write_only=True)
@@ -33,7 +34,7 @@ class BusinessRegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Business
         fields = [
-            "id","first_name","last_name","email","password",'confirm_password',"business_name", "business_name","registration_number","user"
+            "id","first_name","last_name","id_number","email","password",'confirm_password',"business_name", "business_name","registration_number","user"
         ]
 
     def validate(self, attrs):
@@ -46,6 +47,7 @@ class BusinessRegisterSerializer(serializers.ModelSerializer):
         user_data = {
             'first_name': validated_data.pop('first_name'),
             'last_name': validated_data.pop('last_name'),
+            'id_number': validated_data.pop('id_number'),
             'email': validated_data.pop('email'),
             'password': validated_data.pop('password'),
         }
@@ -58,18 +60,18 @@ class BusinessRegisterSerializer(serializers.ModelSerializer):
         user.save()
 
         # Create Location instance
-        location_data = validated_data.pop('location')
-        location = Location.objects.create(**location_data)
+        # location_data = validated_data.pop('location')
+        # location = Location.objects.create(**location_data)
 
         # Create SocialMedia instance
-        social_media_data = validated_data.pop('social_media')
-        social_media = SocialMedia.objects.create(**social_media_data)
+        # social_media_data = validated_data.pop('social_media')
+        # social_media = SocialMedia.objects.create(**social_media_data)
 
         # Create the Business instance with the created user, location, and social media
         business = Business.objects.create(
             user=user,
-            location=location,
-            social_media=social_media,
+            # location=location,
+            # social_media=social_media,
             **validated_data
         )
 
