@@ -36,15 +36,14 @@ ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS","127.0.0.1").split(",")
 CSRF_TRUSTED_ORIGINS = os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS","https://127.0.0.1").split(",")
 
 
-# CORS_ORIGIN_ALLOW_ALL=True
-
-# CORS_ORIGIN_WHITELIST = [
-#     'http://google.com',
-#     'http://hostname.example.com',
-#     'http://localhost:8000',
-#     'http://127.0.0.1:9000'
-# ]
-
+CORS_ORIGIN_ALLOW_ALL = True  # Or use CORS_ORIGIN_WHITELIST for specific origins
+    
+# Example of using CORS_ORIGIN_WHITELIST
+# CORS_ORIGIN_ALLOW_ALL = False
+    # CORS_ORIGIN_WHITELIST = (
+    #    'http://localhost:3000',
+    #    'https://yourdomain.com',
+# )
 # Application definition
 
 INSTALLED_APPS = [
