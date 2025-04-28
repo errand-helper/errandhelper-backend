@@ -20,26 +20,26 @@ jobs:
         echo "BRANCH_NAME=${BRANCH_NAME}" >> $GITHUB_ENV
         echo "VERSION=v1.${{ github.run_number }}" >> $GITHUB_ENV
 
-    - name: Set Docker image based on branch
-      run: |
-        if [ "${{ env.BRANCH_NAME }}" = "master" ]; then
-          echo "IMAGE_NAME=${{ secrets.IMAGE_NAME_PROD }}" >> $GITHUB_ENV
-        elif [ "${{ env.BRANCH_NAME }}" = "dev-server" ]; then
-          echo "IMAGE_NAME=${{ secrets.IMAGE_NAME_DEV }}" >> $GITHUB_ENV
-        else
-          echo "Unsupported branch: ${{ env.BRANCH_NAME }}"
-          exit 1
-        fi
+    # - name: Set Docker image based on branch
+      # run: |
+      #   if [ "${{ env.BRANCH_NAME }}" = "master" ]; then
+      #     echo "IMAGE_NAME=${{ secrets.IMAGE_NAME_PROD }}" >> $GITHUB_ENV
+      #   elif [ "${{ env.BRANCH_NAME }}" = "dev-server" ]; then
+      #     echo "IMAGE_NAME=${{ secrets.IMAGE_NAME_DEV }}" >> $GITHUB_ENV
+      #   else
+      #     echo "Unsupported branch: ${{ env.BRANCH_NAME }}"
+      #     exit 1
+      #   fi
 
     - name: Build Docker image
       run: |
         docker build \
-          -t "${{ env.IMAGE_NAME }}:${{ env.BRANCH_NAME }}_${{ env.VERSION }}"  .
+          -t "${{ secrets.IMAGE_NAME }}:${{ env.BRANCH_NAME }}_${{ env.VERSION }}"  .
   
     - name: Push Docker images
       run: |
         echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
-        docker push "${{ env.IMAGE_NAME }}:${{ env.BRANCH_NAME }}_${{ env.VERSION }}"
+        docker push "${{ secrets.IMAGE_NAME }}:${{ env.BRANCH_NAME }}_${{ env.VERSION }}"
 
 
     # - name: Set Docker image tags
