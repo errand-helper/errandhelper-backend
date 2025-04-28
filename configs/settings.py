@@ -17,6 +17,7 @@ from django.conf import settings
 from dotenv import load_dotenv
 
 # Load environment variables - Docker will use env files specified in docker-compose.yaml
+load_dotenv('.env.local')
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -113,6 +114,8 @@ DATABASES = {
          'PORT': os.getenv('DATABASE_PORT', 5432),
      }
 }
+
+
 
 
 # DATABASES = {
