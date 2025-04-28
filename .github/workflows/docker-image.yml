@@ -11,15 +11,64 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: checkout
+    - name: Checkout
       uses: actions/checkout@v4
-      
-    - name: Set version number
-      run: echo "VERSION=v1.${{ github.run_number }}" >> $GITHUB_ENV
+
+    - name: Set Docker image tags
+      run: |
+        SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+        BRANCH_NAME=$(echo "${{ github.ref }}" | sed 's#refs/heads/##' | tr '/' '-')
+        echo "SHORT_SHA=${SHORT_SHA}" >> $GITHUB_ENV
+        echo "BRANCH_NAME=${BRANCH_NAME}" >> $GITHUB_ENV
+        VERSION="v1.${{ github.run_number }}"
+        echo "VERSION=${VERSION}" >> $GITHUB_ENV
+        export VERSION
 
     - name: Build the Docker image
-      run: docker build -t "${{secrets.IMAGE_NAME}}":latest .
-    - name: push image to docker hub
+      run: |
+        docker build \
+          -t "${{ secrets.IMAGE_NAME }}:latest" \
+          -t "${{ secrets.IMAGE_NAME }}:${{ env.VERSION }}" \
+          -t "${{ secrets.IMAGE_NAME }}:${{ env.SHORT_SHA }}" \
+          -t "${{ secrets.IMAGE_NAME }}:${{ env.BRANCH_NAME }}" .
+
+    - name: Push images to Docker Hub
       run: |
         echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
-        docker push "${{secrets.IMAGE_NAME}}":latest
+        docker push "${{ secrets.IMAGE_NAME }}:latest"
+        docker push "${{ secrets.IMAGE_NAME }}:${{ env.VERSION }}"
+        docker push "${{ secrets.IMAGE_NAME }}:${{ env.SHORT_SHA }}"
+        docker push "${{ secrets.IMAGE_NAME }}:${{ env.BRANCH_NAME }}"
+
+
+
+
+
+
+
+
+# name: Build and Publish image to Docker Hub
+
+# on:
+#   push:
+#     branches: [ "master" ]
+#   pull_request:
+#     branches: [ "master" ]
+
+# jobs:
+#   publish_images:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#     - name: checkout
+#       uses: actions/checkout@v4
+      
+#     - name: Set version number
+#       run: echo "VERSION=v1.${{ github.run_number }}" >> $GITHUB_ENV
+
+#     - name: Build the Docker image
+#       run: docker build -t "${{secrets.IMAGE_NAME}}":latest .
+#     - name: push image to docker hub
+#       run: |
+#         echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
+#         docker push "${{secrets.IMAGE_NAME}}":latest
