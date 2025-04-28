@@ -16,29 +16,57 @@ jobs:
 
     - name: Set Docker image tags
       run: |
-        # Use github.head_ref for PRs, github.ref_name for pushes
-        if [ "${{ github.event_name }}" = "pull_request" ]; then
-          BRANCH_NAME="${{ github.head_ref }}"
-        else
-          BRANCH_NAME="${{ github.ref_name }}"
-        fi
-
-        BRANCH_NAME_SAFE=$(echo "$BRANCH_NAME" | tr '/' '-')  
-
+        BRANCH_NAME="${{ github.ref_name }}"
         echo "BRANCH_NAME=${BRANCH_NAME}" >> $GITHUB_ENV
-        VERSION="v1.${{ github.run_number }}"
-        echo "VERSION=${VERSION}" >> $GITHUB_ENV
-        export VERSION
+        echo "VERSION=v1.${{ github.run_number }}" >> $GITHUB_ENV
+
+    # - name: Set Docker image based on branch
+      # run: |
+      #   if [ "${{ env.BRANCH_NAME }}" = "master" ]; then
+      #     echo "IMAGE_NAME=${{ secrets.IMAGE_NAME_PROD }}" >> $GITHUB_ENV
+      #   elif [ "${{ env.BRANCH_NAME }}" = "dev-server" ]; then
+      #     echo "IMAGE_NAME=${{ secrets.IMAGE_NAME_DEV }}" >> $GITHUB_ENV
+      #   else
+      #     echo "Unsupported branch: ${{ env.BRANCH_NAME }}"
+      #     exit 1
+      #   fi
 
     - name: Build the Docker image
       run: |
         docker build \
-          -t "${{ secrets.IMAGE_NAME }}:${{ env.BRANCH_NAME }}_${{ env.VERSION }}" .
-
-    - name: Push images to Docker Hub
+          -t "${{ secrets.IMAGE_NAME }}:${{ env.BRANCH_NAME }}_${{ env.VERSION }}"  .
+  
+    - name: Push Docker images
       run: |
-        echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
+        echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
         docker push "${{ secrets.IMAGE_NAME }}:${{ env.BRANCH_NAME }}_${{ env.VERSION }}"
+
+
+    # - name: Set Docker image tags
+    #   run: |
+    #     # Use github.head_ref for PRs, github.ref_name for pushes
+    #     if [ "${{ github.event_name }}" = "pull_request" ]; then
+    #       BRANCH_NAME="${{ github.head_ref }}"
+    #     else
+    #       BRANCH_NAME="${{ github.ref_name }}"
+    #     fi
+
+    #     BRANCH_NAME_SAFE=$(echo "$BRANCH_NAME" | tr '/' '-')  
+
+    #     echo "BRANCH_NAME=${BRANCH_NAME}" >> $GITHUB_ENV
+    #     VERSION="v1.${{ github.run_number }}"
+    #     echo "VERSION=${VERSION}" >> $GITHUB_ENV
+    #     export VERSION
+
+    # - name: Build the Docker image
+    #   run: |
+    #     docker build \
+    #       -t "${{ secrets.IMAGE_NAME }}:${{ env.BRANCH_NAME }}_${{ env.VERSION }}" .
+
+    # - name: Push images to Docker Hub
+    #   run: |
+    #     echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
+    #     docker push "${{ secrets.IMAGE_NAME }}:${{ env.BRANCH_NAME }}_${{ env.VERSION }}"
 
 
 
