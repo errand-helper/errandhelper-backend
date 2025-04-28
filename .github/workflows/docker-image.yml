@@ -16,9 +16,7 @@ jobs:
 
     - name: Set Docker image tags
       run: |
-        SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
         BRANCH_NAME=$(echo "${{ github.ref }}" | sed 's#refs/heads/##' | tr '/' '-')
-        echo "SHORT_SHA=${SHORT_SHA}" >> $GITHUB_ENV
         echo "BRANCH_NAME=${BRANCH_NAME}" >> $GITHUB_ENV
         VERSION="v1.${{ github.run_number }}"
         echo "VERSION=${VERSION}" >> $GITHUB_ENV
@@ -27,18 +25,12 @@ jobs:
     - name: Build the Docker image
       run: |
         docker build \
-          -t "${{ secrets.IMAGE_NAME }}:latest" \
-          -t "${{ secrets.IMAGE_NAME }}:${{ env.VERSION }}" \
-          -t "${{ secrets.IMAGE_NAME }}:${{ env.SHORT_SHA }}" \
-          -t "${{ secrets.IMAGE_NAME }}:${{ env.BRANCH_NAME }}" .
+          -t "${{ secrets.IMAGE_NAME }}:${{ env.BRANCH_NAME }}_${{ env.VERSION }}" .
 
     - name: Push images to Docker Hub
       run: |
         echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
-        docker push "${{ secrets.IMAGE_NAME }}:latest"
-        docker push "${{ secrets.IMAGE_NAME }}:${{ env.VERSION }}"
-        docker push "${{ secrets.IMAGE_NAME }}:${{ env.SHORT_SHA }}"
-        docker push "${{ secrets.IMAGE_NAME }}:${{ env.BRANCH_NAME }}"
+        docker push "${{ secrets.IMAGE_NAME }}:${{ env.BRANCH_NAME }}_${{ env.VERSION }}"
 
 
 
