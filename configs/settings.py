@@ -17,7 +17,7 @@ from django.conf import settings
 from dotenv import load_dotenv
 
 # Load environment variables - Docker will use env files specified in docker-compose.yaml
-load_dotenv('.env.local')
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -27,10 +27,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
+# SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
+SECRET_KEY= os.environ.get("DJANGO_SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
+# DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
+DEBUG = str(os.environ.get('DEBUG')) == "1"
+
 
 ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS","127.0.0.1").split(",")
 
@@ -102,28 +105,62 @@ WSGI_APPLICATION = 'configs.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
+# DATABASES = {
+#      'default': {
+#          'ENGINE': 'django.db.backends.{}'.format(
+#              os.getenv('DATABASE_ENGINE', 'sqlite3')
+#          ),
+#          'NAME': os.getenv('DATABASE_NAME'),
+#          'USER': os.getenv('DATABASE_USER'),
+#          'PASSWORD': os.getenv('DATABASE_PASSWORD'),
+#          'HOST': os.getenv('DATABASE_HOST', '127.0.0.1'),
+#          'PORT': os.getenv('DATABASE_PORT', 5432),
+#      }
+# }
+
+
 DATABASES = {
-     'default': {
-         'ENGINE': 'django.db.backends.{}'.format(
-             os.getenv('DATABASE_ENGINE', 'sqlite3')
-         ),
-         'NAME': os.getenv('DATABASE_NAME'),
-         'USER': os.getenv('DATABASE_USER'),
-         'PASSWORD': os.getenv('DATABASE_PASSWORD'),
-         'HOST': os.getenv('DATABASE_HOST', '127.0.0.1'),
-         'PORT': os.getenv('DATABASE_PORT', 5432),
-     }
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
 }
 
+DB_USERNAME = os.environ.get("POSTGRES_USER")
+DB_PASSWORD = os.environ.get("POSTGRES_PASSWORD")
+DB_DATABASE = os.environ.get("POSTGRES_DB")
+DB_HOST = os.environ.get("POSTGRES_HOST")
+DB_PORT = os.environ.get("POSTGRES_PORT")
+DB_IS_AVAIL = all([
+    DB_USERNAME,
+    DB_PASSWORD,
+    DB_DATABASE,
+    DB_HOST,
+    DB_PORT
+])
 
+# POSTGRES_READY=str(os.environ.get('POSTGRES_READY')) == "1"
 
+DB_IGNORE_SSL=os.environ.get("DB_IGNORE_SSL") == "true"
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
+if DB_IS_AVAIL:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": DB_DATABASE,
+            "USER": DB_USERNAME,
+            "PASSWORD": DB_PASSWORD,
+            "HOST": DB_HOST,
+            "PORT": DB_PORT,
+        }
+    }
+    # if not DB_IGNORE_SSL:
+    #      DATABASES["default"]["OPTIONS"] = {
+    #         "sslmode": "require"
+    #      }
+
+print(DATABASES)
+
 
 
 # Password validation

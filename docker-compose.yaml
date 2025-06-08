@@ -1,16 +1,26 @@
 services:
   db:
     image: postgres:17
+    restart: always
+    expose:
+      - 5432
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    # environment:
-    #   - POSTGRES_DB=${POSTGRES_DB:-docker_django}
-    #   - POSTGRES_USER=${POSTGRES_USER:-db_user}
-    #   - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-db_password}
     env_file:
-      - .env.prod
+      - .env
+  
+  redis_db:
+    image: redis
+    restart: always
+    expose:
+      - 6388
+    ports:
+      - "6388:6388"
+    volumes:
+        - redis_data:/data
+    entrypoint: redis-server --appendonly yes --port 6388
 
   errandhelper:
     build: .
@@ -19,14 +29,8 @@ services:
       - db
     volumes:
       - ./static:/app/staticfiles
-    # environment:
-    #   - DATABASE_USER=${POSTGRES_USER:-db_user}
-    #   - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-db_password}
-    #   - DATABASE_NAME=${POSTGRES_DB:-docker_django}
-    #   - DATABASE_HOST=db
-    #   - DATABASE_PORT=5432
     env_file:
-      - .env.prod
+      - .env
 
   admin-proxy:
     image: nginx:latest
@@ -39,6 +43,7 @@ services:
       - errandhelper
 volumes:
   postgres_data:
+  redis_data: 
   # Note for developers:
   # - The database credentials are defined in .env.prod
   # - Database username: db_user 
