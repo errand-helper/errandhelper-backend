@@ -21,7 +21,8 @@ FROM python:3.12-slim
  
 RUN useradd -m -r db_user && \
    mkdir /app && \
-   chown -R db_user /app
+   mkdir /app/staticfiles && \
+   chown -R db_user:db_user /app
  
 # Copy the Python dependencies from the builder stage
 COPY --from=builder /usr/local/lib/python3.12/site-packages/ /usr/local/lib/python3.12/site-packages/
