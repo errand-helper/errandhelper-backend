@@ -23,7 +23,7 @@ jobs:
     - name: Build Docker container
       run: |
         docker build \
-          -t "${{ secrets.IMAGE_NAME }}:${{ github.sha }}" \
+          -t "${{ secrets.IMAGE_NAME }}:$(echo ${{ github.sha }} | cut -c1-7)" \
           -t "${{ secrets.IMAGE_NAME }}:latest" \
           .
     - name: Login to Docker Hub
