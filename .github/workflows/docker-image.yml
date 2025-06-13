@@ -35,10 +35,18 @@ jobs:
       #     exit 1
       #   fi
 
+    # - name: Build the Docker image
+    #   run: |
+    #     docker build \
+    #       -t "${{ secrets.IMAGE_NAME }}:${{ env.BRANCH_NAME }}_${{ env.VERSION }}"  .
+    - name: Sanitize branch name for Docker tag
+      run: echo "SANITIZED_BRANCH_NAME=${BRANCH_NAME//\//-}" >> $GITHUB_ENV
+
     - name: Build the Docker image
       run: |
         docker build \
-          -t "${{ secrets.IMAGE_NAME }}:${{ env.BRANCH_NAME }}_${{ env.VERSION }}"  .
+          -t "${{ secrets.IMAGE_NAME }}:${{ env.SANITIZED_BRANCH_NAME }}_${{ env.VERSION }}"  .
+
   
     - name: Push Docker images
       run: |
