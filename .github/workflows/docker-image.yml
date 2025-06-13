@@ -1,12 +1,16 @@
 name: Build and Publish image to Docker Hub
 
 on:
+  workflow_call:
+  workflow_dispatch:
   push:
     branches: [ "master" ]
-  # pull_request:
-  #   branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
 
 jobs:
+  test_django:
+    uses: ./.github/workflows/test-django.yaml
   publish_images:
     runs-on: ubuntu-latest
 
