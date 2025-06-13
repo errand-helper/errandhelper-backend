@@ -31,7 +31,7 @@ jobs:
         echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
     - name: Push Docker images
       run: |
-        docker push "${{ secrets.IMAGE_NAME }}:${{ github.sha }}"
+        docker push "${{ secrets.IMAGE_NAME }}:${GITHUB_SHA::7}"
         docker push "${{ secrets.IMAGE_NAME }}:latest"
     
 
