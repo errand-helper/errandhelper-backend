@@ -20,6 +20,21 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
+    - name: Build Docker container
+      run: |
+        docker build \
+          -t "${{ secrets.IMAGE_NAME }}:${{ github.sha }}" \
+          -t "${{ secrets.IMAGE_NAME }}:latest" \
+          .
+    - name: Login to Docker Hub
+      run: |
+        echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
+    - name: Push Docker images
+      run: |
+        docker push "${{ secrets.IMAGE_NAME }}:${{ github.sha }}"
+        docker push "${{ secrets.IMAGE_NAME }}:latest"
+    
+
     # - name: Set Docker image tags
     #   run: |
     #     BRANCH_NAME="${{ github.ref_name }}"
