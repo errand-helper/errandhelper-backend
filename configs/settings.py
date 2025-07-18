@@ -158,10 +158,16 @@ if DB_IS_AVAIL:
             "PORT": DB_PORT,
         }
     }
-    if not DB_IGNORE_SSL:
+    # Only require SSL if explicitly requested (for production)
+    if not DB_IGNORE_SSL and os.environ.get("REQUIRE_SSL") == "true":
          DATABASES["default"]["OPTIONS"] = {
             "sslmode": "require"
          }
+    else:
+        # For local development, disable SSL
+        DATABASES["default"]["OPTIONS"] = {
+            "sslmode": "disable"
+        }
 
 # print(DATABASES)
 

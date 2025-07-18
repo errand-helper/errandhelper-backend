@@ -1,13 +1,13 @@
-from django.shortcuts import render
+
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
-from authentication.serializers import LoginSerializer, RegistrationSerializer
+from authentication.serializers import ChangePasswordSerializer, LoginSerializer, RegistrationSerializer
 from rest_framework.response import Response
-from rest_framework import generics, status
-from rest_framework_simplejwt.tokens import RefreshToken,AccessToken
+from rest_framework import status
 from rest_framework.authentication import TokenAuthentication
-# Create your views here.
+
+    
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
@@ -48,14 +48,35 @@ class LoginView(APIView):
         return Response(
             {
                 # 'user': {
-                    'id': validated_data['id'],
-                    'email': validated_data['email'],
-                    'user_type': validated_data['user_type'],
-                    'access': validated_data['access'],
-                    'refresh': validated_data['refresh'],
+                    'id': validated_data['id'], # type: ignore
+                    'email': validated_data['email'], # type: ignore
+                    'user_type': validated_data['user_type'], # type: ignore
+                    'access': validated_data['access'], # type: ignore
+                    'refresh': validated_data['refresh'], # type: ignore
 
 
                 # },
-            },
+            }, # type: ignore
             status=status.HTTP_200_OK
         )
+
+
+class ChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = ChangePasswordSerializer(data=request.data)
+        user = request.user
+
+        if serializer.is_valid():
+            old_password = serializer.validated_data['old_password'] # type: ignore
+            new_password = serializer.validated_data['new_password'] # type: ignore
+
+            if not user.check_password(old_password):
+                return Response({"old_password": ["Wrong password."]}, status=status.HTTP_400_BAD_REQUEST)
+
+            user.set_password(new_password)
+            user.save()
+            return Response({"detail": "Password updated successfully."}, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

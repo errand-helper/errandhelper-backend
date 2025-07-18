@@ -68,10 +68,16 @@ class LoginSerializer(serializers.Serializer):
             'email': user.email,
             'user_type':user.user_type,
             'refresh': str(refresh),
-            'access': str(refresh.access_token),
+            'access': str(refresh.access_token), # type: ignore
         }
     
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["id",'first_name', 'last_name','id_number', 'email',"user_type"]
+
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True, validators=[validate_password])
