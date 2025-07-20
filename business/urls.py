@@ -11,11 +11,11 @@ router.register(r'business-categories', BusinessCategoryViewSet)
 urlpatterns = [
     path('register/', RegisterBusiness.as_view()),
     path('', ListBusinesses.as_view()),
-    path('<uuid:user_id>/', BusinessDetailView.as_view(), name='business-detail'),
+    path('<uuid:user_id>/', BusinessDetailView.as_view(), name='business-detail'), # for clients
     path('business-categories/', BusinessCategoryCreateView.as_view(), name='business-category-create'),
     path('business-categories/<uuid:pk>/', BusinessCategoryUpdateView.as_view(), name='business-category-update'),
     path('', include(router.urls)),
-    path('details/',BusinessRetrieveView.as_view()),
+    path('details/',BusinessRetrieveView.as_view()),  # for owner logged in user account
 
     # path('business-categories/<uuid:pk>/delete/', BusinessCategoryDeleteView.as_view(), name='business-category-delete'),
 

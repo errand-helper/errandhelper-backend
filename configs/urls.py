@@ -32,6 +32,7 @@ urlpatterns = [
     path('profile/', include('profiles.urls')),
     path('service/', include('service.urls')),
     path('order/', include('order.urls')),
+    path('chat/', include('chat.urls')),
 
 
 

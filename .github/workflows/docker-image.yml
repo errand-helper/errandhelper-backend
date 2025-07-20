@@ -1,102 +1,87 @@
 name: Build and Publish image to Docker Hub
 
 on:
+  workflow_call:
+  workflow_dispatch:
   push:
     branches: [ "master" ]
-  # pull_request:
-  #   branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
 
 jobs:
+  test_django:
+    uses: ./.github/workflows/test-django.yaml
   publish_images:
     runs-on: ubuntu-latest
-
+    needs: [test_django]
+    env:
+      DJANGO_SECRET_KEY: test-key-not-good-maybe-make-one-better
     steps:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Set Docker image tags
-      run: |
-        BRANCH_NAME="${{ github.ref_name }}"
-        echo "BRANCH_NAME=${BRANCH_NAME}" >> $GITHUB_ENV
-        echo "VERSION=v1.${{ github.run_number }}" >> $GITHUB_ENV
-
-    # - name: Set Docker image based on branch
-      # run: |
-      #   if [ "${{ env.BRANCH_NAME }}" = "master" ]; then
-      #     echo "IMAGE_NAME=${{ secrets.IMAGE_NAME_PROD }}" >> $GITHUB_ENV
-      #   elif [ "${{ env.BRANCH_NAME }}" = "dev-server" ]; then
-      #     echo "IMAGE_NAME=${{ secrets.IMAGE_NAME_DEV }}" >> $GITHUB_ENV
-      #   else
-      #     echo "Unsupported branch: ${{ env.BRANCH_NAME }}"
-      #     exit 1
-      #   fi
-
-    - name: Build the Docker image
+    - name: Build Docker container
       run: |
         docker build \
-          -t "${{ secrets.IMAGE_NAME }}:${{ env.BRANCH_NAME }}_${{ env.VERSION }}"  .
-  
-    - name: Push Docker images
+          -t "${{ secrets.IMAGE_NAME }}:$(echo ${{ github.sha }} | cut -c1-7)" \
+          -t "${{ secrets.IMAGE_NAME }}:latest" \
+          .
+    - name: Login to Docker Hub
       run: |
         echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
-        docker push "${{ secrets.IMAGE_NAME }}:${{ env.BRANCH_NAME }}_${{ env.VERSION }}"
-
+    - name: Push Docker images
+      run: |
+        docker push "${{ secrets.IMAGE_NAME }}:$(echo ${{ github.sha }} | cut -c1-7)"
+        docker push "${{ secrets.IMAGE_NAME }}:latest"
+    # Uncomment the following lines if you want to set specific tags based on branch names or versions
+    # - name: Set up Docker Buildx
+    #   uses: docker/setup-buildx-action@v2
+    #   with:
+    #     buildkitd-flags: --allow-insecure-entitlement security.insecure
+    #     install: true
+    #     driver-opts: image=moby/buildkit:latest
+    # - name: Set up Docker QEMU
+    #   uses: docker/setup-qemu-action@v2
+    #   with:
+    #     platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/ppc64le,linux/s390x
+    # - name: Set up Docker Buildx
+    #   uses: docker/setup-buildx-action@v2
+    #   with:
+    #     buildkitd-flags: --allow-insecure-entitlement security.insecure
+    #     install: true
+    #     driver-opts: image=moby/buildkit:latest
+    # - name: Set up Docker Buildx cache
+    #   uses: docker/cache-action@v2
+    #   with:
+    #     cache-from: type=registry,ref=${{ secrets.IMAGE_NAME }}:cache
+    #     cache-to: type=registry,ref=${{ secrets.IMAGE_NAME }}:cache,mode=max
+    #     buildx: true
+    # - name: Set up Docker Buildx
 
     # - name: Set Docker image tags
     #   run: |
-    #     # Use github.head_ref for PRs, github.ref_name for pushes
-    #     if [ "${{ github.event_name }}" = "pull_request" ]; then
-    #       BRANCH_NAME="${{ github.head_ref }}"
-    #     else
-    #       BRANCH_NAME="${{ github.ref_name }}"
-    #     fi
-
-    #     BRANCH_NAME_SAFE=$(echo "$BRANCH_NAME" | tr '/' '-')  
-
+    #     BRANCH_NAME="${{ github.ref_name }}"
     #     echo "BRANCH_NAME=${BRANCH_NAME}" >> $GITHUB_ENV
-    #     VERSION="v1.${{ github.run_number }}"
-    #     echo "VERSION=${VERSION}" >> $GITHUB_ENV
-    #     export VERSION
+    #     echo "VERSION=v1.${{ github.run_number }}" >> $GITHUB_ENV
+
+    # - name: Sanitize branch name for Docker tag
+    #   run: echo "SANITIZED_BRANCH_NAME=${BRANCH_NAME//\//-}" >> $GITHUB_ENV
 
     # - name: Build the Docker image
     #   run: |
     #     docker build \
-    #       -t "${{ secrets.IMAGE_NAME }}:${{ env.BRANCH_NAME }}_${{ env.VERSION }}" .
+    #       -t "${{ secrets.IMAGE_NAME }}:${{ env.SANITIZED_BRANCH_NAME }}_${{ env.VERSION }}"  .
 
-    # - name: Push images to Docker Hub
+  
+    # - name: Push Docker images
     #   run: |
-    #     echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
+    #     echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
     #     docker push "${{ secrets.IMAGE_NAME }}:${{ env.BRANCH_NAME }}_${{ env.VERSION }}"
 
 
+   
 
 
 
 
 
-
-# name: Build and Publish image to Docker Hub
-
-# on:
-#   push:
-#     branches: [ "master" ]
-#   pull_request:
-#     branches: [ "master" ]
-
-# jobs:
-#   publish_images:
-#     runs-on: ubuntu-latest
-
-#     steps:
-#     - name: checkout
-#       uses: actions/checkout@v4
-      
-#     - name: Set version number
-#       run: echo "VERSION=v1.${{ github.run_number }}" >> $GITHUB_ENV
-
-#     - name: Build the Docker image
-#       run: docker build -t "${{secrets.IMAGE_NAME}}":latest .
-#     - name: push image to docker hub
-#       run: |
-#         echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
-#         docker push "${{secrets.IMAGE_NAME}}":latest

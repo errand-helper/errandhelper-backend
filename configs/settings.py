@@ -37,7 +37,11 @@ DEBUG = str(os.environ.get('DEBUG')) == "1"
 
 ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS","127.0.0.1").split(",")
 
-CSRF_TRUSTED_ORIGINS = os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS","https://127.0.0.1").split(",")
+# Add testserver for Django tests
+if "testserver" not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append("testserver")
+
+CSRF_TRUSTED_ORIGINS = os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS","http://127.0.0.1",).split(",")
 
 
 CORS_ORIGIN_ALLOW_ALL = True  # Or use CORS_ORIGIN_WHITELIST for specific origins
@@ -61,6 +65,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
+    'channels',
 
     'authentication',
     'business',
@@ -68,7 +73,8 @@ INSTALLED_APPS = [
     'service',
     'order',
     'media_location',
-    'business_profile'
+    'business_profile',
+    'chat',
 ]
 
 MIDDLEWARE = [
@@ -101,6 +107,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'configs.wsgi.application'
+ASGI_APPLICATION = 'configs.asgi.application'
 
 
 # Database
@@ -154,10 +161,16 @@ if DB_IS_AVAIL:
             "PORT": DB_PORT,
         }
     }
-    if not DB_IGNORE_SSL:
+    # Only require SSL if explicitly requested (for production)
+    if not DB_IGNORE_SSL and os.environ.get("REQUIRE_SSL") == "true":
          DATABASES["default"]["OPTIONS"] = {
             "sslmode": "require"
          }
+    else:
+        # For local development, disable SSL
+        DATABASES["default"]["OPTIONS"] = {
+            "sslmode": "disable"
+        }
 
 # print(DATABASES)
 
@@ -197,7 +210,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 
@@ -258,4 +271,14 @@ SIMPLE_JWT = {
     # "TOKEN_BLACKLIST_SERIALIZER": "rest_framework_simplejwt.serializers.TokenBlacklistSerializer",
     # "SLIDING_TOKEN_OBTAIN_SERIALIZER": "rest_framework_simplejwt.serializers.TokenObtainSlidingSerializer",
     # "SLIDING_TOKEN_REFRESH_SERIALIZER": "rest_framework_simplejwt.serializers.TokenRefreshSlidingSerializer",
+}
+
+# Channels configuration
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+"hosts": [(os.environ.get('REDIS_HOST', 'localhost'), int(os.environ.get('REDIS_PORT', 6379)))],
+        },
+    },
 }

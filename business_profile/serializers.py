@@ -135,10 +135,11 @@ class BusinessProfileMinimalSerializer(serializers.ModelSerializer):
     image =  serializers.CharField(read_only=True)
     location = LocationSerializer()
     email = serializers.EmailField(source="user.email",read_only=True)
+    user_id = serializers.CharField(source="user.id",read_only=True)
 
     class Meta:
         model = BusinessProfile
-        fields = ["business_id", "bio","business_name","phone_number","is_approved","image","location","email"]
+        fields = ["business_id", "bio","business_name","phone_number","is_approved","image","location","email","user_id"]
 
     # def get_business_id(self, obj):
     #     return obj.business_id

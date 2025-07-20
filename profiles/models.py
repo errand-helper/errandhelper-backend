@@ -10,19 +10,20 @@ from authentication.models import User
 class Profile(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, max_length=30)
     user = models.OneToOneField(User,related_name="user_profile",on_delete=models.CASCADE)
-    bio = models.TextField()
-    image = models.ImageField(upload_to="images/profiles",null=True)
+    phone_number = models.CharField(max_length=200, default='', blank=True)
+    bio = models.TextField(default='', blank=True)
+    image = models.ImageField(upload_to="images/profiles",null=True, blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.user.email
+        return self.user.email # type: ignore
     
     @receiver(post_save,sender=User)
     def create_user_profile(sender,instance,created,**kwargs):
         if created:
-            Profile.objects.create(user=instance)
+            Profile.objects.create(user=instance) # type: ignore
 
     @receiver(post_save, sender=User)
     def save_user_profile(sender, instance, **kwargs):

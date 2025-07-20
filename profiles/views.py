@@ -14,29 +14,28 @@ class ProfileRetrieveView(RetrieveUpdateDestroyAPIView):
 
     def get_object(self):
         user = self.request.user
-        return Profile.objects.get(user=user)
+        return Profile.objects.get(user=user) # type: ignore
 
     def retrieve(self, request, *args, **kwargs):
         profile = self.get_object()
         serializer = self.serializer_class(profile)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def update(self, request, *args, **kwargs):
+        profile = self.get_object()
+        allowed_fields = {'phone_number', 'bio'}
+        filtered_data = {field: value for field, value in request.data.items() if field in allowed_fields}
+        serializer = self.serializer_class(profile, data=filtered_data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-    # def destroy(self, request, *args, **kwargs):
-    #     profile = self.get_object()
-    #     user = profile.user
-    #     # Check and delete related objects if they exist
-    #     if profile.location:
-    #         profile.location.delete()
-    #     if profile.social_media:
-    #         profile.social_media.delete()
-    #     profile.delete()
-    #     user.delete()
-    #     return Response(status=status.HTTP_204_NO_CONTENT)
-    
+
 
 class ProfileImageView(RetrieveAPIView):
     serializer_class = ProfileImageSerializer
     permission_classes = [IsAuthenticated] 
 
     def get_object(self):
-        return Profile.objects.get(user=self.request.user)
+        return Profile.objects.get(user=self.request.user) # type: ignore
