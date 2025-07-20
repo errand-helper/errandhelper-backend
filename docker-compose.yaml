@@ -10,42 +10,77 @@ services:
       - postgres_data:/var/lib/postgresql/data
     env_file:
       - .env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mike}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
   
   redis_db:
-    image: redis
+    image: redis:7-alpine
     restart: always
     expose:
-      - 6388
+      - 6379
     ports:
-      - "6388:6388"
+      - "6379:6379"
     volumes:
         - redis_data:/data
-    entrypoint: redis-server --appendonly yes --port 6388
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
 
+  # HTTP Server (Django WSGI)
   errandhelper:
     build: .
     container_name: errandhelper-backend
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+      redis_db:
+        condition: service_healthy
     volumes:
       - staticfiles:/app/staticfiles
     env_file:
       - .env
+    ports:
+      - "8000:8000"
+    command: ["/app/entrypoint.prod.sh"]
+
+  # WebSocket Server (Django ASGI)
+  errandhelper-websocket:
+    build: .
+    container_name: errandhelper-websocket
+    depends_on:
+      db:
+        condition: service_healthy
+      redis_db:
+        condition: service_healthy
+      errandhelper:
+        condition: service_started
+    env_file:
+      - .env
+    ports:
+      - "8002:8002"
+    command: ["/app/entrypoint.websocket.sh"]
 
   admin-proxy:
     image: nginx:latest
     ports:
-      - "8001:80"
+      - "8080:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - staticfiles:/static:ro
     depends_on:
       - errandhelper
+      - errandhelper-websocket
 volumes:
   postgres_data:
   redis_data:
   staticfiles:
   # Note for developers:
-  # - The database credentials are defined in .env.prod
-  # - Database username: db_user 
-  # - Database name: docker_django
+  # - The database credentials are defined in .env
+  # - Database username: mike (from POSTGRES_USER in .env)
+  # - Database name: postgres (from POSTGRES_DB in .env)

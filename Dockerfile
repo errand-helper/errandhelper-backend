@@ -41,11 +41,12 @@ ENV PYTHONUNBUFFERED=1
 # Switch to non-root user
 USER db_user
  
-# Expose the application port
-EXPOSE 8000 
+# Expose the application ports
+EXPOSE 8000 8002
 
-# Make entry file executable
+# Make entry files executable
 RUN chmod +x  /app/entrypoint.prod.sh
+RUN chmod +x  /app/entrypoint.websocket.sh
  
 # Start the application using Gunicorn
 CMD ["/app/entrypoint.prod.sh"]

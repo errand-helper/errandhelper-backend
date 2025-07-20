@@ -68,7 +68,7 @@ class BusinessRegisterSerializer(serializers.ModelSerializer):
         # social_media = SocialMedia.objects.create(**social_media_data)
 
         # Create the Business instance with the created user, location, and social media
-        business = Business.objects.create(
+        business = Business.objects.create( #type:ignore
             user=user,
             # location=location,
             # social_media=social_media,
