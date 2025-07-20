@@ -22,7 +22,8 @@ class RegisterBusiness(APIView):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        # serializer.data, 
+        return Response({"details": "Created successfully"},status=status.HTTP_201_CREATED)
     
 class BusinessRetrieveView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated]
