@@ -73,7 +73,7 @@ INSTALLED_APPS = [
     'service',
     'order',
     'media_location',
-    'business_profile',
+    # 'business_profile',
     'chat',
 ]
 

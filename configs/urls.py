@@ -28,7 +28,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('authentication.urls')),
     path('business/', include('business.urls')),
-    path('business_profile/', include('business_profile.urls')),
+    # path('business_profile/', include('business_profile.urls')),
     path('profile/', include('profiles.urls')),
     path('service/', include('service.urls')),
     path('order/', include('order.urls')),

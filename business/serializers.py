@@ -1,8 +1,9 @@
 from rest_framework import serializers
 
-from authentication.models import User,UserTypes
+# from authentication.models import User,UserTypes
 from authentication.serializers import UserSerializer
 # from profiles.models import Location, SocialMedia
+from authentication.models import User
 from service.models import Category
 from service.serializers import CategorySerializer
 
@@ -56,7 +57,7 @@ class BusinessRegisterSerializer(serializers.ModelSerializer):
         # Create the User instance
         user = User.objects.create_user(**user_data)
         user.set_password(user_data['password'])
-        user.user_type = UserTypes.BUSINESS
+        user.user_type = User.role.BUSINESS
         user.save()
 
         # Create Location instance

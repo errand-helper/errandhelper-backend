@@ -8,7 +8,7 @@ from media_location.models import Location, SocialMedia
 
 
 
-class BusinessProfile(models.Model):
+class Business_Profile(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, max_length=30)
     user = models.OneToOneField(User,related_name="business_profile",on_delete=models.CASCADE)
     business = models.OneToOneField(Business,related_name="business_profile",on_delete=models.CASCADE)
