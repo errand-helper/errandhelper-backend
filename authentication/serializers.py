@@ -1,7 +1,7 @@
 # accounts/serializers.py
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import ClientProfile, BusinessProfile
+from .models import ClientProfile
 from django.db import transaction
 
 User = get_user_model()
@@ -30,10 +30,7 @@ class ClientProfileSerializer(serializers.ModelSerializer):
         exclude = ['user']
 
 
-class BusinessProfileSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = BusinessProfile
-        exclude = ['user']
+# BusinessProfileSerializer removed - business profiles now handled in business app
 
 
 

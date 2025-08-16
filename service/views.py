@@ -5,7 +5,7 @@ from rest_framework.permissions import AllowAny,IsAuthenticated,IsAdminUser
 from rest_framework.response import Response
 from rest_framework import status,generics
 
-from business.models import Business
+# from business.models import Business
 from service.models import Category
 from service.permissions import IsOwnerOfBusinessProfile, IsOwnerOrReadOnly
 

@@ -1,7 +1,7 @@
 import uuid
 from django.db import models
 
-from authentication.models import User
+# from authentication.models import User
 # from business.models import Business
 
 # Create your models here.

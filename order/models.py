@@ -10,7 +10,8 @@ from authentication.models import User
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 
-from business.models import Business
+# from business.models import Business
+from business.models import BusinessInfo
 from media_location.models import Location
 
 
@@ -57,7 +58,7 @@ class Order(models.Model):
     special_instructions = models.TextField()
     paid = models.BooleanField()
     # services = models.ManyToManyField(Service, related_name='orders')
-    business = models.ForeignKey(Business, on_delete=models.CASCADE)
+    business = models.ForeignKey(BusinessInfo, on_delete=models.CASCADE)
     user = models.ForeignKey(User,on_delete=models.CASCADE)
     location = models.ForeignKey(Location,on_delete=models.CASCADE)
     activity_time = models.ForeignKey(ActivityTime,on_delete=models.CASCADE)

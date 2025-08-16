@@ -1,11 +1,10 @@
 # accounts/views.py
 from rest_framework import generics, permissions
 from django.contrib.auth import get_user_model
-from .models import ClientProfile, BusinessProfile
+from .models import ClientProfile
 from .serializers import (
     UserSignupSerializer,
-    ClientProfileSerializer,
-    BusinessProfileSerializer
+    ClientProfileSerializer
 )
 # accounts/views.py
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -90,13 +89,7 @@ class ClientProfileView(generics.RetrieveUpdateAPIView):
         return profile
 
 
-class BusinessProfileView(generics.RetrieveUpdateAPIView):
-    serializer_class = BusinessProfileSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_object(self):
-        profile, created = BusinessProfile.objects.get_or_create(user=self.request.user)
-        return profile
+# BusinessProfileView removed - business profiles now handled in business app
 
 
 

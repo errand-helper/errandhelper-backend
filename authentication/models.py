@@ -40,8 +40,6 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
 
-
-
 class ClientProfile(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, max_length=30)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='client_profile')
@@ -71,14 +69,7 @@ class Service(models.Model):
     name = models.CharField(max_length=255)
     def __str__(self):
         return self.name
-    
 
-class SocialMedia(models.Model):
-    facebook = models.URLField(blank=True)
-    twitter = models.URLField(blank=True)
-    linkedin = models.URLField(blank=True)
-    instagram = models.URLField(blank=True)
-    website = models.URLField(blank=True)
 
 class Location(models.Model):
     address = models.CharField(max_length=200,blank=True)
@@ -86,35 +77,8 @@ class Location(models.Model):
     location = models.CharField(max_length=200,blank=True)
     city = models.CharField(max_length=200,blank=True)
 
-class Badge(models.Model):
-    name = models.CharField(max_length=100, unique=True)
-    def __str__(self):
-        return self.name
 
 
-class BusinessInfo(models.Model):
-    logo = models.ImageField(upload_to='business_logos/', blank=True, null=True)
-    business_name = models.CharField(max_length=255)
-    business_email = models.CharField(max_length=255)
-    business_phone = models.CharField(max_length=255)
-    business_tagline = models.CharField(max_length=255)
-    business_description = models.CharField(max_length=255)
-    registration_number = models.CharField(max_length=100, blank=True)
-    badges = models.ManyToManyField(Badge, blank=True)
-    social_links = models.OneToOneField(SocialMedia, on_delete=models.CASCADE, related_name='business_info')
-
-    def __str__(self):
-        return self.business_name
-
-
-class BusinessProfile(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, max_length=30)
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='business_profile')
-    business_info = models.OneToOneField(BusinessInfo, on_delete=models.CASCADE, related_name='business_profile')
-    location = models.OneToOneField(Location, on_delete=models.CASCADE, related_name='business_profile')
-    services = models.ManyToManyField(Service, blank=True)
-    def __str__(self):
-        return f"Business Profile - {self.business_name}"
 
 
 
@@ -137,7 +101,15 @@ class BusinessProfile(models.Model):
 
 
 
-
+# class BusinessProfile(models.Model):
+#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, max_length=30)
+#     # user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='business_profile')
+#     business_info = models.OneToOneField(BusinessInfo, on_delete=models.CASCADE, related_name='business_profile', null=True, blank=True)
+#     location = models.OneToOneField(Location, on_delete=models.CASCADE, related_name='business_profile', null=True, blank=True)
+#     services = models.ManyToManyField(Service, blank=True)
+#     def __str__(self):
+#         business_name = self.business_info.business_name if self.business_info else "Unknown Business"
+#         return f"Business Profile - {business_name}"
 
 
 
