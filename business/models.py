@@ -9,6 +9,11 @@ class SocialMedia(models.Model):
     website = models.URLField(blank=True)
 
 class BusinessInfo(models.Model):
+    ROLE_CHOICES = (
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    )
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     business_logo = models.ImageField(upload_to='business_logos/', blank=True, null=True)
     business_name = models.CharField(max_length=255, blank=True)
@@ -18,6 +23,11 @@ class BusinessInfo(models.Model):
     business_description = models.CharField(max_length=255, blank=True)
     registration_number = models.CharField(max_length=100, blank=True)
     is_verified = models.BooleanField(default=False)
+    registration_number = models.CharField(max_length=100, blank=True, null=True) 
+    kra_pin = models.CharField(max_length=20, blank=True, null=True) # can be changed to tax pin for world wide expansion
+    tax_compliance = models.FileField(upload_to="business_docs/", blank=True, null=True)  # PDF/Images Tax Compliance + License
+    license = models.FileField(upload_to="business_docs/", blank=True, null=True)  # PDF/Images Tax Compliance + License
+    verification_status = models.CharField(max_length=10, choices=ROLE_CHOICES,default='pending',blank=True, null=True)
     social_links = models.OneToOneField(
         SocialMedia,
         on_delete=models.CASCADE,
@@ -41,7 +51,12 @@ class BusinessInfo(models.Model):
 
 
 
-
+# System cross-checks against:
+# BRS Portal / eCitizen (for registration number).
+# KRA iTax (for PIN).
+# If matches, system auto-sets is_verified = True.
+# If not, flag for manual admin review.
+# (BRS & KRA APIs are not public, so you might need partnerships or scraping — most startups in KE still do manual checks first.)
 
 
 
