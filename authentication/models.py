@@ -53,22 +53,6 @@ class ClientProfile(models.Model):
 
     def __str__(self):
         return f"Client Profile - {self.user.username}"
-    
-
-class Category(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, max_length=30)
-    name = models.CharField(max_length=255,unique=True)
-    class Meta:
-        verbose_name_plural = "Categories"
-    def __str__(self):
-        return self.name
-    
-class Service(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, max_length=30)
-    category = models.ForeignKey(Category,on_delete=models.CASCADE,null=True,blank=True, related_name="services")
-    name = models.CharField(max_length=255)
-    def __str__(self):
-        return self.name
 
 
 class Location(models.Model):

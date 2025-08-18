@@ -1,6 +1,34 @@
 import uuid
 from django.db import models
 
+from service.models import Category
+
+
+
+
+    
+class Service(models.Model):
+    PRICE_TYPE_CHOICES = (
+        ('hourly', 'Hourly Rate'),
+        ('fixed', 'Fixed Price'),
+        ('quote', 'By Quote'),
+    )
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, null=True, blank=True, related_name="services")
+    name = models.CharField(max_length=255)
+    price_type = models.CharField(max_length=10, choices=PRICE_TYPE_CHOICES, default='quote', blank=True, null=True)
+    price_from = models.CharField(max_length=255, blank=True, null=True)
+    price_to = models.CharField(max_length=255, blank=True, null=True)
+    user = models.ForeignKey(
+        'authentication.User',  
+        on_delete=models.CASCADE,
+        related_name='services', blank=True, null=True
+    )
+
+    def __str__(self):
+        return self.name
+
+
 class SocialMedia(models.Model):
     facebook = models.URLField(blank=True)
     twitter = models.URLField(blank=True)

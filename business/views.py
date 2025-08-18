@@ -1,7 +1,10 @@
 from rest_framework import viewsets, permissions
 from rest_framework.exceptions import ValidationError
-from .models import BusinessInfo
-from .serializers import BusinessInfoSerializer
+from .models import BusinessInfo, Service
+from .serializers import BusinessInfoSerializer, ServiceSerializer
+from rest_framework.views import APIView
+from rest_framework.response import Response
+
 
 class BusinessInfoViewSet(viewsets.ModelViewSet):
     serializer_class = BusinessInfoSerializer
@@ -18,27 +21,25 @@ class BusinessInfoViewSet(viewsets.ModelViewSet):
         serializer.save(user=self.request.user)
 
 
+class BusinessList(APIView):
+    def get(self, request, format=None):
+        snippets = BusinessInfo.objects.all()
+        serializer = BusinessInfoSerializer(snippets, many=True)
+        return Response(serializer.data)
 
 
+class ServiceViewSet(viewsets.ModelViewSet):
+    queryset = Service.objects.all()
+    serializer_class = ServiceSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
+    def get_queryset(self):
+        # Only return services for the logged-in user
+        return Service.objects.filter(user=self.request.user)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    def perform_create(self, serializer):
+        # Automatically assign logged-in user
+        serializer.save(user=self.request.user)
 
 
 # from django.shortcuts import render
@@ -65,9 +66,9 @@ class BusinessInfoViewSet(viewsets.ModelViewSet):
 #         serializer = self.serializer_class(data=request.data)
 #         serializer.is_valid(raise_exception=True)
 #         serializer.save()
-#         # serializer.data, 
+#         # serializer.data,
 #         return Response({"details": "Created successfully"},status=status.HTTP_201_CREATED)
-    
+
 # class BusinessRetrieveView(generics.RetrieveUpdateDestroyAPIView):
 #     permission_classes = [IsAuthenticated]
 #     serializer_class = BusinessRegisterSerializer
@@ -80,8 +81,8 @@ class BusinessInfoViewSet(viewsets.ModelViewSet):
 #     def retrieve(self, request, *args, **kwargs):
 #         business = self.get_object()
 #         serializer = self.serializer_class(business)
-#         return Response(serializer.data, status=status.HTTP_200_OK) 
-    
+#         return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 # class BusinessDetailView(APIView):
 #     def get(self, request, user_id):
@@ -99,19 +100,19 @@ class BusinessInfoViewSet(viewsets.ModelViewSet):
     #     try:
     #         # Get the business instance by its ID
     #         business = Business.objects.get(id=business_id)
-            
+
     #         # Serialize the business data
     #         serializer = BusinessRetrieve(business)
-            
+
     #         # Return the serialized data
     #         return Response(serializer.data, status=status.HTTP_200_OK)
     #     except Business.DoesNotExist:
     #         # Return a 404 response if the business does not exist
     #         return Response({"error": "Business not found."}, status=status.HTTP_404_NOT_FOUND)
-    
+
 # class ListBusinesses(APIView):
 #     permission_classes = [IsAuthenticated,IsAdminUser]
-    
+
 #     def get(self,request,format=None):
 #         businesses = Business.objects.all()
 #         serializer = BusinessRegisterSerializer(businesses,many=True)
@@ -155,4 +156,4 @@ class BusinessInfoViewSet(viewsets.ModelViewSet):
 #         return Response(
 #             {"message": "Category removed successfully."},
 #             status=status.HTTP_200_OK
-#         ) 
+#         )

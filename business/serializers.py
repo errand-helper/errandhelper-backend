@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import BusinessInfo, SocialMedia
+from .models import BusinessInfo, Service, SocialMedia
 
 class SocialMediaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -34,6 +34,13 @@ class BusinessInfoSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
         return instance
+    
+
+
+class ServiceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Service
+        fields = '__all__'
 
 
 

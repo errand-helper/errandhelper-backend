@@ -29,7 +29,7 @@ class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         data = super().validate(attrs)
         # Add user information to the response
-        # data['id'] = str(self.user.id)
+        data['id'] = str(self.user.id)
         # data['email'] = self.user.email
         data['role'] = self.user.role
         # data['first_name'] = self.user.first_name
