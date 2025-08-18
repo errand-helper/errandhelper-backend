@@ -1,4 +1,4 @@
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, generics, permissions
 from rest_framework.exceptions import ValidationError
 from .models import BusinessInfo, Service
 from .serializers import BusinessInfoSerializer, ServiceSerializer
@@ -21,11 +21,15 @@ class BusinessInfoViewSet(viewsets.ModelViewSet):
         serializer.save(user=self.request.user)
 
 
-class BusinessList(APIView):
-    def get(self, request, format=None):
-        snippets = BusinessInfo.objects.all()
-        serializer = BusinessInfoSerializer(snippets, many=True)
-        return Response(serializer.data)
+class BusinessList(generics.ListAPIView):
+    queryset = BusinessInfo.objects.all()
+    serializer_class = BusinessInfoSerializer
+    permission_classes = [permissions.AllowAny] 
+
+class PublicBusinessViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = BusinessInfo.objects.all()
+    serializer_class = BusinessInfoSerializer
+    permission_classes = [permissions.AllowAny]
 
 
 class ServiceViewSet(viewsets.ModelViewSet):
