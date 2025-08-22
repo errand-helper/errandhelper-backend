@@ -5,6 +5,37 @@ from service.models import Category
 
 
 
+class ServiceArea(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    area_name = models.CharField(max_length=255, blank=True, null=True)
+    physical_address = models.CharField(max_length=255, blank=True, null=True)
+    service_radius = models.CharField(max_length=255, blank=True, null=True)
+    latitude = models.DecimalField(max_length=255,max_digits=8, decimal_places=2, blank=True, null=True)
+    longitude = models.DecimalField(max_length=255,max_digits=8,decimal_places=2, blank=True, null=True)
+    user = models.ForeignKey(
+        'authentication.User',  
+        on_delete=models.CASCADE,
+        related_name='service_area', blank=True, null=True
+    )
+
+    def __str__(self):
+        return self.area_name
+    
+
+class FrequentlyAskedQuestion(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    question = models.CharField(max_length=255, blank=True, null=True)
+    answer = models.CharField(max_length=255, blank=True, null=True)
+
+    user = models.ForeignKey(
+        'authentication.User',  
+        on_delete=models.CASCADE,
+        related_name='frequently_asked_question', blank=True, null=True
+    )
+
+    def __str__(self):
+        return self.question
+
 
     
 class Service(models.Model):
@@ -89,34 +120,6 @@ class BusinessInfo(models.Model):
 
 
 
-
-
-
-
-
-
-
-
-
-
-# class Business(models.Model):
-#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, max_length=30)
-#     user = models.ForeignKey(User,on_delete=models.CASCADE,related_name="business")
-#     business_name = models.CharField(max_length=255,unique=True)
-#     registration_number = models.CharField(max_length=200,unique=True)
-
-#     class Meta:
-#         verbose_name_plural = "Businesses"
-
-
-#     def __str__(self):
-#         return self.business_name
-    
-
-# class BusinessCategory(models.Model):
-#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, max_length=30)
-#     business = models.ForeignKey(Business,on_delete=models.CASCADE)
-#     categories = models.ManyToManyField(Category, related_name='business')
 
 
 
