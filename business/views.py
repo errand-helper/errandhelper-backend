@@ -1,7 +1,8 @@
+import django_filters
 from rest_framework import viewsets, generics, permissions, filters, status
 from rest_framework.exceptions import ValidationError
 from .models import BusinessInfo, FrequentlyAskedQuestion, Service, ServiceArea
-from .serializers import BusinessInfoSerializer, FrequentlyAskedQuestionSerializer, ServiceAreaSerializer, ServiceSerializer
+from .serializers import BusinessInfoSerializer, FrequentlyAskedQuestionSerializer, PublicBusinessDetailSerializer, PublicBusinessListSerializer, ServiceAreaSerializer, ServiceSerializer
 # from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
@@ -15,6 +16,21 @@ class ServicePagination(PageNumberPagination):
     page_size = 10
     page_size_query_param = 'page_size'
     max_page_size = 50
+
+class BusinessInfoFilter(django_filters.FilterSet):
+    # Allow filtering by service category name or ID
+    services__category = django_filters.CharFilter(
+        field_name="services__category__name", lookup_expr="iexact"
+    )
+
+    # Allow filtering by service area name
+    service_area__area_name = django_filters.CharFilter(
+        field_name="service_area__area_name", lookup_expr="icontains"
+    )
+
+    class Meta:
+        model = BusinessInfo
+        fields = []  # Leave empty to avoid DRF errors
 
 
 class BusinessInfoViewSet(viewsets.ModelViewSet):
@@ -36,14 +52,8 @@ class BusinessList(generics.ListAPIView):
     queryset = BusinessInfo.objects.all()
     serializer_class = BusinessInfoSerializer
     permission_classes = [permissions.AllowAny]
+    
 
-
-class PublicBusinessViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = BusinessInfo.objects.all()
-    serializer_class = BusinessInfoSerializer
-    permission_classes = [permissions.AllowAny]
-
-    # BusinessInfoSerializer ,ServiceSerializer,ServiceAreaSerializer
 
 
 class ServiceViewSet(viewsets.ModelViewSet):
@@ -121,3 +131,38 @@ class FrequentlyAskedQuestionViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+class PublicBusinessViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = BusinessInfo.objects.all()
+    serializer_class = PublicBusinessListSerializer
+    permission_classes = [permissions.AllowAny]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    search_fields = ["business_name", "business_tagline"]
+    filterset_class = BusinessInfoFilter 
+    
+
+
+
+
+
+
+
+
+
+
+
+
+# class PublicBusinessViewSet(viewsets.ReadOnlyModelViewSet):
+#     queryset = BusinessInfo.objects.all()
+#     permission_classes = [permissions.AllowAny]
+
+#     def get_serializer_class(self):
+#         if self.action == "retrieve":
+#             return PublicBusinessDetailSerializer
+#         return PublicBusinessListSerializer
+
+
+# class PublicBusinessViewSet(viewsets.ReadOnlyModelViewSet):
+#     queryset = BusinessInfo.objects.all()
+#     serializer_class = BusinessInfoSerializer
+#     permission_classes = [permissions.AllowAny]
