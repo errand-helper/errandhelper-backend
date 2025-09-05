@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import BusinessInfoViewSet, BusinessList, FrequentlyAskedQuestionViewSet, PublicBusinessViewSet, ServiceAreaViewSet, ServiceViewSet
+from .views import BusinessInfoViewSet, BusinessList, BusinessStatsView, FrequentlyAskedQuestionViewSet, PublicBusinessViewSet, ServiceAreaViewSet, ServiceViewSet
 from business import views
 
 router = DefaultRouter()
@@ -13,6 +13,7 @@ router.register(r'business-list', PublicBusinessViewSet, basename='public-busine
 
 urlpatterns = [
     path('', include(router.urls)),
+     path("stats/", BusinessStatsView.as_view(), name="business-stats"),
 ]
 
 

@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from .models import Location
+
 from .models import Category
 
 
@@ -9,6 +11,19 @@ class CategorySerializer(serializers.ModelSerializer):
         fields =[
             'id','name'
         ]
+
+class LocationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Location
+        fields =[
+            'id','area_name'
+        ]
+
+
+
+
+
+
 
 # class ServiceSerializer(serializers.ModelSerializer):
 #     # categories = CategorySerializer(many=True, read_only=True)

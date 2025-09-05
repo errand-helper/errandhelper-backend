@@ -1,10 +1,12 @@
 from rest_framework import serializers
 from .models import BusinessInfo, FrequentlyAskedQuestion, Service, ServiceArea, SocialMedia
 
+
 class SocialMediaSerializer(serializers.ModelSerializer):
     class Meta:
         model = SocialMedia
         fields = '__all__'
+
 
 class BusinessInfoSerializer(serializers.ModelSerializer):
     social_links = SocialMediaSerializer(required=False)
@@ -29,12 +31,13 @@ class BusinessInfoSerializer(serializers.ModelSerializer):
                     setattr(instance.social_links, attr, value)
                 instance.social_links.save()
             else:
-                instance.social_links = SocialMedia.objects.create(**social_data)
+                instance.social_links = SocialMedia.objects.create(
+                    **social_data)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
         return instance
-    
+
 
 class ServiceSerializer(serializers.ModelSerializer):
     class Meta:
@@ -57,6 +60,8 @@ class FrequentlyAskedQuestionSerializer(serializers.ModelSerializer):
 class PublicBusinessListSerializer(serializers.ModelSerializer):
     category = serializers.SerializerMethodField()
     service_areas = serializers.SerializerMethodField()
+    services = serializers.SerializerMethodField()
+    frequently_asked_questions = serializers.SerializerMethodField()
 
     class Meta:
         model = BusinessInfo
@@ -64,8 +69,11 @@ class PublicBusinessListSerializer(serializers.ModelSerializer):
             "id",
             "business_name",
             "business_tagline",
-            "category",       
-            "service_areas",  
+            "business_description",
+            "category",
+            "service_areas",
+            "services",
+            "frequently_asked_questions",
         ]
 
     def get_category(self, obj):
@@ -75,6 +83,15 @@ class PublicBusinessListSerializer(serializers.ModelSerializer):
     def get_service_areas(self, obj):
         # Get distinct service areas
         return list(obj.user.service_area.values_list("area_name", flat=True).distinct())
+
+    def get_services(self, obj):
+        services = obj.user.services.values("id", "name","category","price_type","price_from","price_to").distinct()
+        return list(services)
+    
+    def get_frequently_asked_questions(self, obj):
+        faqs = obj.user.frequently_asked_question.values("id", "question", "answer").distinct()
+        return list(faqs)
+
 
 class PublicBusinessDetailSerializer(serializers.ModelSerializer):
     social_links = SocialMediaSerializer()
@@ -89,3 +106,13 @@ class PublicBusinessDetailSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class CategoryStatsSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    business_count = serializers.IntegerField()
+
+
+class ServiceAreaStatsSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    area_name = serializers.CharField()
+    business_count = serializers.IntegerField()

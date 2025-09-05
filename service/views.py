@@ -6,11 +6,11 @@ from rest_framework.response import Response
 from rest_framework import status,generics
 
 # from business.models import Business
-from service.models import Category
-from service.permissions import IsOwnerOfBusinessProfile, IsOwnerOrReadOnly
+from .models import Category, Location
+from .permissions import IsOwnerOfBusinessProfile, IsOwnerOrReadOnly
 
 # from .models import Category
-from .serializers import CategorySerializer
+from .serializers import CategorySerializer, LocationSerializer
 # Create your views here.
 class CategoryListCreateAPIView(APIView):
     permission_classes = [IsAuthenticated] # only admin to add category but everyone can view
@@ -52,6 +52,54 @@ class CategoryDetailView(APIView):
         category = self.get_object(pk)
         category.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+
+
+
+class LocationListCreateAPIView(APIView):
+    permission_classes = [IsAuthenticated,] # only admin to add location but everyone can view
+    serializer_class = LocationSerializer
+
+    def get(self, request, format=None):
+        locations = Location.objects.all()
+        serializer = self.serializer_class(locations, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request, format=None):
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid() and request.user.is_staff:
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        elif not request.user.is_staff: # remove here permission to add service category"
+            return Response({"error": "You don't have permission to add location"}, status=status.HTTP_403_FORBIDDEN)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class LocationDetailView(APIView):
+    permission_classes = (IsAuthenticated,IsOwnerOrReadOnly)
+    serializer_class = LocationSerializer
+
+    def get_object(self, pk):
+        try:
+            return Location.objects.get(pk=pk)
+        except Location.DoesNotExist:
+            raise Http404
+
+    def put(self, request, pk, format=None):
+        location = self.get_object(pk)
+        serializer = self.serializer_class(location, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request, pk, format=None):
+        location = self.get_object(pk)
+        location.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 
 
 
