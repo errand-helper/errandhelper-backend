@@ -64,8 +64,9 @@ class SocialMedia(models.Model):
     facebook = models.URLField(blank=True)
     twitter = models.URLField(blank=True)
     linkedin = models.URLField(blank=True)
-    instagram = models.URLField(blank=True)
-    website = models.URLField(blank=True)
+    instagram = models.URLField()
+    website = models.URLField()
+
 
 class BusinessInfo(models.Model):
     ROLE_CHOICES = (
@@ -74,13 +75,13 @@ class BusinessInfo(models.Model):
         ('rejected', 'Rejected'),
     )
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    business_logo = models.ImageField(upload_to='business_logos/', blank=True, null=True)
-    business_name = models.CharField(max_length=255, blank=True)
+    business_logo = models.ImageField(upload_to='media/business_logos/', blank=True, null=True)
+    business_name = models.CharField(max_length=255, blank=True) # 
     business_email = models.CharField(max_length=255, blank=True)
     business_phone = models.CharField(max_length=255, blank=True)
     business_tagline = models.CharField(max_length=255, blank=True)
     business_description = models.CharField(max_length=255, blank=True)
-    registration_number = models.CharField(max_length=100, blank=True)
+    # registration_number = models.CharField(max_length=100, blank=True)
     is_verified = models.BooleanField(default=False)
     registration_number = models.CharField(max_length=100, blank=True, null=True) 
     kra_pin = models.CharField(max_length=20, blank=True, null=True) # can be changed to tax pin for world wide expansion
@@ -99,6 +100,8 @@ class BusinessInfo(models.Model):
         on_delete=models.CASCADE,
         related_name='business_info'
     )
+    available = models.BooleanField(default=False)
+
 
     class Meta:
         verbose_name_plural = "Business Information"

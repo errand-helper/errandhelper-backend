@@ -54,26 +54,37 @@ class ServiceAreaSerializer(serializers.ModelSerializer):
 class FrequentlyAskedQuestionSerializer(serializers.ModelSerializer):
     class Meta:
         model = FrequentlyAskedQuestion
-        fields = '__all__'
+        # fields = '__all__'
+        fields = [
+            'id','question','answer'
+        ]
 
 
 class PublicBusinessListSerializer(serializers.ModelSerializer):
     category = serializers.SerializerMethodField()
     service_areas = serializers.SerializerMethodField()
     services = serializers.SerializerMethodField()
-    frequently_asked_questions = serializers.SerializerMethodField()
+    # frequently_asked_questions = serializers.SerializerMethodField()
+    business_logo = serializers.SerializerMethodField()
+    # social_links = serializers.SerializerMethodField()
+
 
     class Meta:
         model = BusinessInfo
         fields = [
             "id",
             "business_name",
+            "business_logo",
+            # "business_phone",
+            # "business_email",
             "business_tagline",
-            "business_description",
+            # "business_description",
             "category",
             "service_areas",
             "services",
-            "frequently_asked_questions",
+            # "frequently_asked_questions",
+            "available",
+            # "social_links"
         ]
 
     def get_category(self, obj):
@@ -88,9 +99,26 @@ class PublicBusinessListSerializer(serializers.ModelSerializer):
         services = obj.user.services.values("id", "name","category","price_type","price_from","price_to").distinct()
         return list(services)
     
-    def get_frequently_asked_questions(self, obj):
-        faqs = obj.user.frequently_asked_question.values("id", "question", "answer").distinct()
-        return list(faqs)
+    # def get_frequently_asked_questions(self, obj):
+    #     faqs = obj.user.frequently_asked_question.values("id", "question", "answer").distinct()
+    #     return list(faqs)
+    
+    def get_business_logo(self, obj):
+        request = self.context.get("request")
+        if obj.business_logo:
+            return request.build_absolute_uri(obj.business_logo.url)
+        return None
+    
+    # def get_social_links(self, obj):
+    #     if obj.social_links:
+    #         return {
+    #             "facebook": obj.social_links.facebook,
+    #             "instagram": obj.social_links.instagram,
+    #             "twitter": obj.social_links.twitter,
+    #             "linkedin": obj.social_links.linkedin,
+    #             "website": obj.social_links.website,
+    #         }
+    #     return None
 
 
 class PublicBusinessDetailSerializer(serializers.ModelSerializer):
@@ -116,3 +144,10 @@ class ServiceAreaStatsSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     area_name = serializers.CharField()
     business_count = serializers.IntegerField()
+
+
+class AvailabilitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BusinessInfo
+        fields = ["available"]
+

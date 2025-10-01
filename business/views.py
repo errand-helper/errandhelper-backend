@@ -2,7 +2,7 @@ import django_filters
 from rest_framework import viewsets, generics, permissions, filters, status
 from rest_framework.exceptions import ValidationError
 from .models import BusinessInfo, FrequentlyAskedQuestion, Service, ServiceArea
-from .serializers import BusinessInfoSerializer, FrequentlyAskedQuestionSerializer, PublicBusinessDetailSerializer, PublicBusinessListSerializer, ServiceAreaSerializer, ServiceSerializer
+from .serializers import AvailabilitySerializer, BusinessInfoSerializer, FrequentlyAskedQuestionSerializer, PublicBusinessDetailSerializer, PublicBusinessListSerializer, ServiceAreaSerializer, ServiceSerializer
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
@@ -74,10 +74,10 @@ class BusinessInfoViewSet(viewsets.ModelViewSet):
         serializer.save(user=self.request.user)
 
 
-class BusinessList(generics.ListAPIView):
-    queryset = BusinessInfo.objects.all()
-    serializer_class = BusinessInfoSerializer
-    permission_classes = [permissions.AllowAny]
+# class BusinessList(generics.ListAPIView):
+#     queryset = BusinessInfo.objects.all()
+#     serializer_class = BusinessInfoSerializer
+#     permission_classes = [permissions.AllowAny]
 
 
 class ServiceViewSet(viewsets.ModelViewSet):
@@ -157,7 +157,7 @@ class FrequentlyAskedQuestionViewSet(viewsets.ModelViewSet):
         serializer.save(user=self.request.user)
 
 
-class PublicBusinessViewSet(viewsets.ReadOnlyModelViewSet):
+class PublicBusinessListViewSet(viewsets.ReadOnlyModelViewSet):
     # queryset = BusinessInfo.objects.all()
     queryset = BusinessInfo.objects.all().distinct()
     serializer_class = PublicBusinessListSerializer
@@ -209,14 +209,29 @@ class BusinessStatsView(APIView):
         })
 
 
-# class PublicBusinessViewSet(viewsets.ReadOnlyModelViewSet):
-#     queryset = BusinessInfo.objects.all()
-#     permission_classes = [permissions.AllowAny]
 
-#     def get_serializer_class(self):
-#         if self.action == "retrieve":
-#             return PublicBusinessDetailSerializer
-#         return PublicBusinessListSerializer
+class AvailabilityView(generics.UpdateAPIView):
+    serializer_class = AvailabilitySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        # Return the BusinessInfo for the logged-in user only
+        try:
+            return BusinessInfo.objects.get(user=self.request.user)
+        except BusinessInfo.DoesNotExist:
+            raise ValidationError("BusinessInfo not found for this user.")
+
+
+
+
+class PublicBusinessDetailViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = BusinessInfo.objects.all()
+    permission_classes = [permissions.AllowAny]
+
+    def get_serializer_class(self):
+        if self.action == "retrieve":
+            return PublicBusinessDetailSerializer
+        return PublicBusinessListSerializer
 
 
 # class PublicBusinessViewSet(viewsets.ReadOnlyModelViewSet):
