@@ -75,6 +75,7 @@ class PublicBusinessListSerializer(serializers.ModelSerializer):
             "id",
             "business_name",
             "business_logo",
+            "user",
             # "business_phone",
             # "business_email",
             "business_tagline",

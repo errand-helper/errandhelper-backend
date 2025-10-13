@@ -3,11 +3,53 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-# from business.models import Business
-from order.models import Order
-from order.serializers import OrderSerializer
+from rest_framework.decorators import action
+from rest_framework import viewsets, permissions
+from order.models import Errand
+from order.serializers import ErrandSerializer, OrderSerializer
 
 # Create your views here.
+
+
+class ErrandViewSet(viewsets.ModelViewSet):
+    queryset = Errand.objects.all()
+    serializer_class = ErrandSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        # Also works — same as overriding create() in serializer
+        serializer.save(client=self.request.user)
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == 'client':
+            return Errand.objects.filter(client=user)
+        elif user.role == 'business':
+            return Errand.objects.filter(business=user)
+        return Errand.objects.none()
+
+# class ErrandViewSet(viewsets.ModelViewSet):
+#     queryset = Errand.objects.all()
+#     serializer_class = ErrandSerializer
+#     permission_classes = [permissions.IsAuthenticated]
+
+#     @action(detail=True, methods=['post'])
+#     def respond(self, request, pk=None):
+#         """Business accepts or rejects an errand."""
+#         errand = self.get_object()
+#         if request.user != errand.business:
+#             return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+
+#         decision = request.data.get('decision')
+#         if decision not in ['accepted', 'rejected']:
+#             return Response({'error': 'Invalid decision'}, status=status.HTTP_400_BAD_REQUEST)
+
+#         errand.status = decision
+#         errand.save()
+#         return Response({'message': f'Errand {decision} successfully.'})
+
+
+
+
 class OrderView(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = OrderSerializer
@@ -25,7 +67,7 @@ class OrderView(APIView):
         #     return Response({'error': 'Business not found'}, status=status.HTTP_404_NOT_FOUND)
 
         # Filter orders by the business instance
-        orders = Order.objects.filter(business=business)
+        orders = Errand.objects.filter(business=business)
         serializer = self.serializer_class(orders, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
         # business = self.request.business

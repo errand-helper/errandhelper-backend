@@ -2,9 +2,10 @@ from rest_framework import serializers
 
 # from business.models import Location
 # from business.serializers import LocationSerializer
+# from authentication.models import Location
 from media_location.models import Location
 from media_location.serializers import LocationSerializer
-from order.models import ActivityTime, Instruction, Order
+from order.models import Errand
 # from profiles.models import Location
 # from profiles.serializers import LocationSerializer
 # from profiles.serializers import LocationSerializer
@@ -12,43 +13,86 @@ from order.models import ActivityTime, Instruction, Order
 # from service.serializers import ServiceSerializer
 
 
-class ActivityTimeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ActivityTime
-        fields = [
-            'preferred_date','start_time','stop_time','frequency'
-        ]
+# class ActivityTimeSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = ActivityTime
+#         fields = [
+#             'preferred_date','start_time','stop_time','frequency'
+#         ]
 
-    def validate(self, attrs):
-        """Ensure stop_time is after start_time"""
-        if attrs['stop_time'] <= attrs['start_time']:
-            raise serializers.ValidationError('Stop time must be after start time')
-        return super().validate(attrs)
+#     def validate(self, attrs):
+#         """Ensure stop_time is after start_time"""
+#         if attrs['stop_time'] <= attrs['start_time']:
+#             raise serializers.ValidationError('Stop time must be after start time')
+#         return super().validate(attrs)
     
 # serializers.py
 
 
 
-class InstructionSerializer(serializers.ModelSerializer):
+# class InstructionSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = Instruction
+#         fields = ['complete', 'instruction']
+
+
+class ErrandSerializer(serializers.ModelSerializer):
+    locations = LocationSerializer(many=True)  # ✅ nested list of locations
+
     class Meta:
-        model = Instruction
-        fields = ['complete', 'instruction']
+        model = Errand
+        fields = '__all__'
+        read_only_fields = ['client']
+
+    def create(self, validated_data):
+        locations_data = validated_data.pop('locations', [])
+        validated_data.pop('client', None)
+        errand = Errand.objects.create(client=self.context['request'].user, **validated_data)
+        
+        
+        for loc_data in locations_data:
+            loc, _ = Location.objects.get_or_create(**loc_data)
+            errand.locations.add(loc)
+
+        return errand
+
+
+# class ErrandSerializer(serializers.ModelSerializer):
+#     locations = LocationSerializer(many=True)
+
+#     class Meta:
+#         model = Errand
+#         fields = '__all__'
+#         read_only_fields = ['status', 'created_at', 'updated_at','client']
+
+#     def create(self, validated_data):
+#         # Automatically assign logged-in user as client
+#         validated_data['client'] = self.context['request'].user
+
+#         location = validated_data.pop('location', None)
+#         if location:
+#             social = Location.objects.create(**location)
+#             validated_data['location'] = social
+#         return super().create(validated_data)
+
+
+
 
 class OrderSerializer(serializers.ModelSerializer):
-    instructions = InstructionSerializer(many=True)
+    # instructions = InstructionSerializer(many=True)
     user_details = serializers.SerializerMethodField(read_only=True)
     business_details = serializers.SerializerMethodField(read_only=True)
     # services_details = serializers.SerializerMethodField(read_only=True)
 
     location = LocationSerializer()
-    activity_time = ActivityTimeSerializer()
+    # activity_time = ActivityTimeSerializer()
 
     class Meta:
-        model = Order
+        model = Errand
         fields = [
             'id', 'reference_number', 'instructions', 'completed', 'accepted', 
             'payment', 'paid', 
-            'location', 'activity_time', 'order_status','user_details','business_details'
+            'location', 'order_status','user_details','business_details'
         ]
         read_only_fields = ['id', 'reference_number']
 
@@ -68,20 +112,20 @@ class OrderSerializer(serializers.ModelSerializer):
 
         # Create location and activity_time instances
         location_instance = Location.objects.create(**location_data)
-        activity_time_instance = ActivityTime.objects.create(**activity_time_data)
+        # activity_time_instance = ActivityTime.objects.create(**activity_time_data)
         
         # Create the order instance
-        order = Order.objects.create(
+        order = Errand.objects.create(
             user=user_instance,
             business=business_instance,
             location=location_instance,
-            activity_time=activity_time_instance,
+            # activity_time=activity_time_instance,
             **validated_data
         )
 
         # Create instructions related to the order
-        for instruction_data in instructions_data:
-            Instruction.objects.create(order=order, **instruction_data)
+        # for instruction_data in instructions_data:
+        #     Instruction.objects.create(order=order, **instruction_data)
 
         # Set services if provided
         # if services_data:

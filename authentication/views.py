@@ -1,10 +1,9 @@
 # accounts/views.py
 from rest_framework import generics, permissions
 from django.contrib.auth import get_user_model
-from .models import ClientProfile
+# from .models import ClientProfile
 from .serializers import (
     UserSignupSerializer,
-    ClientProfileSerializer
 )
 # accounts/views.py
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -80,13 +79,13 @@ class SignupView(generics.CreateAPIView):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-class ClientProfileView(generics.RetrieveUpdateAPIView):
-    serializer_class = ClientProfileSerializer
-    permission_classes = [permissions.IsAuthenticated]
+# class ClientProfileView(generics.RetrieveUpdateAPIView):
+#     serializer_class = ClientProfileSerializer
+#     permission_classes = [permissions.IsAuthenticated]
 
-    def get_object(self):
-        profile, created = ClientProfile.objects.get_or_create(user=self.request.user)
-        return profile
+#     def get_object(self):
+#         profile, created = ClientProfile.objects.get_or_create(user=self.request.user)
+#         return profile
 
 
 # BusinessProfileView removed - business profiles now handled in business app

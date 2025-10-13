@@ -74,7 +74,6 @@ INSTALLED_APPS = [
     'service',
     'order',
     'media_location',
-    # 'business_profile',
     'chat',
 ]
 

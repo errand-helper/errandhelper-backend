@@ -1,7 +1,7 @@
 # accounts/serializers.py
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import ClientProfile
+# from .models import ClientProfile
 from django.db import transaction
 
 User = get_user_model()
@@ -22,12 +22,15 @@ class UserSignupSerializer(serializers.ModelSerializer):
             user.set_password(password)
             user.save()
             return user
+        
+
+        
 
 
-class ClientProfileSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ClientProfile
-        exclude = ['user']
+# class ClientProfileSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = ClientProfile
+#         exclude = ['user']
 
 
 # BusinessProfileSerializer removed - business profiles now handled in business app

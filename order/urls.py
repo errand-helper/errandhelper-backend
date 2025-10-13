@@ -1,11 +1,16 @@
-from django.urls import path
-from order.views import  OrderView
+from django.urls import path,include
+from order.views import  ErrandViewSet, OrderView
 from . import views
+from rest_framework.routers import DefaultRouter
+
+
+router = DefaultRouter()
+router.register(r'errands', ErrandViewSet, basename='errand')
 
 
 urlpatterns = [
 #     path('create', OrderView.as_view()),
-  
+  path('', include(router.urls)),
     # path('create/<uuid:business_id>/', OrderView.as_view(), name='create-order'),
     path('orders/', OrderView.as_view(), name='order-list-create'),
     path('create-order/<uuid:business_id>/', OrderView.as_view(), name='create-order'),  # If using the business_id approach
