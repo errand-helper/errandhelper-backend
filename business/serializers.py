@@ -40,6 +40,8 @@ class BusinessInfoSerializer(serializers.ModelSerializer):
 
 
 class ServiceSerializer(serializers.ModelSerializer):
+    category = serializers.CharField(source="category.name", read_only=True)
+
     class Meta:
         model = Service
         fields = '__all__'
@@ -129,10 +131,22 @@ class PublicBusinessDetailSerializer(serializers.ModelSerializer):
     frequently_asked_question = FrequentlyAskedQuestionSerializer(
         source="user.frequently_asked_question", many=True
     )
-
     class Meta:
         model = BusinessInfo
         fields = "__all__"
+
+class PublicBusinessDetailLiteSerializer(serializers.ModelSerializer):
+    services = ServiceSerializer(source="user.services", many=True)
+    class Meta:
+        model = BusinessInfo
+        fields = [
+            "id",
+            "business_name",
+            "business_logo",
+            "user",
+            "available",
+            "services",
+        ]
 
 
 class CategoryStatsSerializer(serializers.Serializer):

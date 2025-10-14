@@ -2,7 +2,7 @@ import django_filters
 from rest_framework import viewsets, generics, permissions, filters, status
 from rest_framework.exceptions import ValidationError
 from .models import BusinessInfo, FrequentlyAskedQuestion, Service, ServiceArea
-from .serializers import AvailabilitySerializer, BusinessInfoSerializer, FrequentlyAskedQuestionSerializer, PublicBusinessDetailSerializer, PublicBusinessListSerializer, ServiceAreaSerializer, ServiceSerializer
+from .serializers import AvailabilitySerializer, BusinessInfoSerializer, FrequentlyAskedQuestionSerializer, PublicBusinessDetailLiteSerializer, PublicBusinessDetailSerializer, PublicBusinessListSerializer, ServiceAreaSerializer, ServiceSerializer
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
@@ -232,6 +232,10 @@ class PublicBusinessDetailViewSet(viewsets.ReadOnlyModelViewSet):
         if self.action == "retrieve":
             return PublicBusinessDetailSerializer
         return PublicBusinessListSerializer
+    
+class PublicBusinessDetailLiteViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = BusinessInfo.objects.filter(available=True)
+    serializer_class = PublicBusinessDetailLiteSerializer
 
 
 # class PublicBusinessViewSet(viewsets.ReadOnlyModelViewSet):

@@ -12,7 +12,6 @@ from django.utils import timezone
 from media_location.models import Location
 
 
-
 class Errand(models.Model):
     PRIORITY_CHOICES = [
         ('low', 'Low'),
@@ -32,9 +31,9 @@ class Errand(models.Model):
     ]
 
     STATUS_CHOICES = [
-        ('pending', 'Pending'),       # waiting for business to respond
-        ('accepted', 'Accepted'),     # business accepted
-        ('rejected', 'Rejected'),     # business rejected
+        ('pending', 'Pending'),       
+        ('accepted', 'Accepted'),     
+        ('rejected', 'Rejected'),     
         ('in_progress', 'In Progress'),
         ('completed', 'Completed'),
         ('cancelled', 'Cancelled'),
@@ -91,3 +90,14 @@ class Errand(models.Model):
 
 
 
+class ErrandImage(models.Model):
+    errand = models.ForeignKey(
+        'Errand',
+        on_delete=models.CASCADE,
+        related_name='images'
+    )
+    image = models.ImageField(upload_to='errand_docs/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Image for {self.errand.errand_title}"

@@ -5,7 +5,7 @@ from rest_framework import serializers
 # from authentication.models import Location
 from media_location.models import Location
 from media_location.serializers import LocationSerializer
-from order.models import Errand
+from order.models import Errand, ErrandImage
 # from profiles.models import Location
 # from profiles.serializers import LocationSerializer
 # from profiles.serializers import LocationSerializer
@@ -35,9 +35,20 @@ from order.models import Errand
 #         model = Instruction
 #         fields = ['complete', 'instruction']
 
+class ErrandImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ErrandImage
+        fields = ['id', 'image', 'uploaded_at']
+
+
 
 class ErrandSerializer(serializers.ModelSerializer):
-    locations = LocationSerializer(many=True)  # ✅ nested list of locations
+    locations = LocationSerializer(many=True) 
+    images = ErrandImageSerializer(many=True, required=False)
+    start_date = serializers.DateTimeField(input_formats=["%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S"], required=False)
+    stop_date = serializers.DateTimeField(input_formats=["%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S"], required=False)
+
+ 
 
     class Meta:
         model = Errand
@@ -46,15 +57,26 @@ class ErrandSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         locations_data = validated_data.pop('locations', [])
+        images_data = validated_data.pop('images', [])
         validated_data.pop('client', None)
         errand = Errand.objects.create(client=self.context['request'].user, **validated_data)
         
         
+        # for loc_data in locations_data:
+        #     loc, _ = Location.objects.get_or_create(**loc_data)
+        #     errand.locations.add(loc)
         for loc_data in locations_data:
-            loc, _ = Location.objects.get_or_create(**loc_data)
+            loc = Location.objects.create(**loc_data)
             errand.locations.add(loc)
 
+        for img_data in images_data:
+            ErrandImage.objects.create(errand=errand, **img_data)
+
         return errand
+
+
+
+
 
 
 # class ErrandSerializer(serializers.ModelSerializer):

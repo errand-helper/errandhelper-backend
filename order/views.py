@@ -7,6 +7,8 @@ from rest_framework.decorators import action
 from rest_framework import viewsets, permissions
 from order.models import Errand
 from order.serializers import ErrandSerializer, OrderSerializer
+from rest_framework.parsers import MultiPartParser, FormParser
+
 
 # Create your views here.
 
@@ -15,6 +17,7 @@ class ErrandViewSet(viewsets.ModelViewSet):
     queryset = Errand.objects.all()
     serializer_class = ErrandSerializer
     permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
 
     def perform_create(self, serializer):
         # Also works — same as overriding create() in serializer
