@@ -11,13 +11,11 @@ from rest_framework.parsers import MultiPartParser, FormParser
 
 
 # Create your views here.
-
-
 class ErrandViewSet(viewsets.ModelViewSet):
     queryset = Errand.objects.all()
     serializer_class = ErrandSerializer
     permission_classes = [permissions.IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser]
+    # parser_classes = [MultiPartParser, FormParser]
 
     def perform_create(self, serializer):
         # Also works — same as overriding create() in serializer
@@ -29,6 +27,7 @@ class ErrandViewSet(viewsets.ModelViewSet):
         elif user.role == 'business':
             return Errand.objects.filter(business=user)
         return Errand.objects.none()
+    
 
 # class ErrandViewSet(viewsets.ModelViewSet):
 #     queryset = Errand.objects.all()

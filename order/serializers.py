@@ -1,3 +1,4 @@
+import os
 from rest_framework import serializers
 
 # from business.models import Location
@@ -11,7 +12,10 @@ from order.models import Errand, ErrandImage
 # from profiles.serializers import LocationSerializer
 # from service.models import Service
 # from service.serializers import ServiceSerializer
-
+import boto3
+from django.conf import settings
+import base64
+import uuid
 
 # class ActivityTimeSerializer(serializers.ModelSerializer):
 #     class Meta:
@@ -35,10 +39,55 @@ from order.models import Errand, ErrandImage
 #         model = Instruction
 #         fields = ['complete', 'instruction']
 
+def get_s3_client():
+    return boto3.client(
+        's3',
+        aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+        aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
+        region_name=os.getenv('AWS_S3_REGION_NAME', 'us-east-1')
+    )
+
+s3 = get_s3_client()
+
+# print(s3)
+
 class ErrandImageSerializer(serializers.ModelSerializer):
+    image_base64 = serializers.CharField(write_only=True, required=True)
+    image_url = serializers.CharField(read_only=True)
+
     class Meta:
         model = ErrandImage
-        fields = ['id', 'image', 'uploaded_at']
+        fields = ['id', 'image_base64', 'image_url', 'uploaded_at']
+
+        # fields = ['id', 'image', 'uploaded_at']
+
+    def create(self, validated_data):
+        base64_str = validated_data.pop('image_base64')
+        # print(base64_data,s3)
+        if base64_str.startswith('data:'):
+            # split metadata and base64 data
+            header, base64_data = base64_str.split(';base64,')
+        else:
+            base64_data = base64_str
+
+        # Decode the image
+        file_data = base64.b64decode(base64_data)
+
+        # Generate a unique file name
+        file_name = f"errands/{uuid.uuid4()}.jpg"
+
+        # Upload to S3
+        s3.put_object(
+            Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+            Key=file_name,
+            Body=file_data,
+            ContentType='image/jpeg'
+        )
+    # Construct file URL
+        image_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{file_name}"
+
+        validated_data['image_url'] = image_url
+        return super().create(validated_data)
 
 
 
@@ -70,7 +119,9 @@ class ErrandSerializer(serializers.ModelSerializer):
             errand.locations.add(loc)
 
         for img_data in images_data:
-            ErrandImage.objects.create(errand=errand, **img_data)
+            img_serializer = ErrandImageSerializer(data=img_data, context=self.context)
+            img_serializer.is_valid(raise_exception=True)
+            img_serializer.save(errand=errand)
 
         return errand
 
