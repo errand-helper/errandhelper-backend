@@ -1,55 +1,25 @@
 import os
 from rest_framework import serializers
 
-# from business.models import Location
-# from business.serializers import LocationSerializer
-# from authentication.models import Location
 from media_location.models import Location
 from media_location.serializers import LocationSerializer
 from order.models import Errand, ErrandImage
-# from profiles.models import Location
-# from profiles.serializers import LocationSerializer
-# from profiles.serializers import LocationSerializer
-# from service.models import Service
-# from service.serializers import ServiceSerializer
 import boto3
 from django.conf import settings
 import base64
 import uuid
 
-# class ActivityTimeSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = ActivityTime
-#         fields = [
-#             'preferred_date','start_time','stop_time','frequency'
-#         ]
-
-#     def validate(self, attrs):
-#         """Ensure stop_time is after start_time"""
-#         if attrs['stop_time'] <= attrs['start_time']:
-#             raise serializers.ValidationError('Stop time must be after start time')
-#         return super().validate(attrs)
-    
-# serializers.py
-
-
-
-# class InstructionSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Instruction
-#         fields = ['complete', 'instruction']
 
 def get_s3_client():
     return boto3.client(
         's3',
         aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
         aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
-        region_name=os.getenv('AWS_S3_REGION_NAME', 'us-east-1')
+        region_name=os.getenv('AWS_S3_REGION_NAME', '')
     )
 
 s3 = get_s3_client()
 
-# print(s3)
 
 class ErrandImageSerializer(serializers.ModelSerializer):
     image_base64 = serializers.CharField(write_only=True, required=True)
@@ -59,17 +29,13 @@ class ErrandImageSerializer(serializers.ModelSerializer):
         model = ErrandImage
         fields = ['id', 'image_base64', 'image_url', 'uploaded_at']
 
-        # fields = ['id', 'image', 'uploaded_at']
-
     def create(self, validated_data):
         base64_str = validated_data.pop('image_base64')
-        # print(base64_data,s3)
         if base64_str.startswith('data:'):
             # split metadata and base64 data
             header, base64_data = base64_str.split(';base64,')
         else:
             base64_data = base64_str
-
         # Decode the image
         file_data = base64.b64decode(base64_data)
 
@@ -96,8 +62,6 @@ class ErrandSerializer(serializers.ModelSerializer):
     images = ErrandImageSerializer(many=True, required=False)
     start_date = serializers.DateTimeField(input_formats=["%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S"], required=False)
     stop_date = serializers.DateTimeField(input_formats=["%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S"], required=False)
-
- 
 
     class Meta:
         model = Errand
@@ -126,27 +90,53 @@ class ErrandSerializer(serializers.ModelSerializer):
         return errand
 
 
+class ErrandListMinimalSerializer(serializers.ModelSerializer):
+    client_name = serializers.SerializerMethodField()
+    business_name = serializers.SerializerMethodField()
+    class Meta:
+        model = Errand
+        fields = ['reference_number','status','client_name', 'business_name','created_at','priority']
+
+    def get_client_name(self, obj):
+        """Return the full name of the client."""
+        if obj.client:
+            full_name = f"{obj.client.first_name or ''} {obj.client.last_name or ''}".strip()
+            return full_name if full_name else obj.client.email
+        return None
+
+    def get_business_name(self, obj):
+        """Return the business name from BusinessInfo."""
+        if hasattr(obj.business, "business_info"):
+            return obj.business.business_info.business_name
+        return obj.business.email  # fallback if business_info doesn’t exist
 
 
 
 
-# class ErrandSerializer(serializers.ModelSerializer):
-#     locations = LocationSerializer(many=True)
 
-#     class Meta:
-#         model = Errand
-#         fields = '__all__'
-#         read_only_fields = ['status', 'created_at', 'updated_at','client']
 
-#     def create(self, validated_data):
-#         # Automatically assign logged-in user as client
-#         validated_data['client'] = self.context['request'].user
 
-#         location = validated_data.pop('location', None)
-#         if location:
-#             social = Location.objects.create(**location)
-#             validated_data['location'] = social
-#         return super().create(validated_data)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

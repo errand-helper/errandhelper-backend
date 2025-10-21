@@ -1,11 +1,12 @@
 from django.urls import path,include
-from order.views import  ErrandViewSet, OrderView
+from order.views import  ErrandViewSet, OrderView,ErrandMinimalViewSet
 from . import views
 from rest_framework.routers import DefaultRouter
 
 
 router = DefaultRouter()
 router.register(r'errands', ErrandViewSet, basename='errand')
+router.register(r'errand-list', ErrandMinimalViewSet, basename='errand-list')
 
 
 urlpatterns = [

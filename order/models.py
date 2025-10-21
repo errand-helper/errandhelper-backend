@@ -2,7 +2,6 @@ import random
 import string
 import uuid
 from django.db import models
-# from django.forms import ValidationError
 
 from authentication.models import User
 
@@ -26,8 +25,8 @@ class Errand(models.Model):
 
     PAYMENT_METHOD_CHOICES = [
         ('card', 'Card'),
-        ('cash', 'Cash'),
         ('platform', 'Platform'),
+        ('bank','Bank')
     ]
 
     STATUS_CHOICES = [
@@ -96,7 +95,6 @@ class ErrandImage(models.Model):
         on_delete=models.CASCADE,
         related_name='images'
     )
-    # image = models.ImageField(upload_to='errand_docs/')
     image_url = models.URLField(max_length=500)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 

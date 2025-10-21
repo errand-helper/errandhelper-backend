@@ -2,12 +2,12 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status,filters
 from rest_framework.decorators import action
 from rest_framework import viewsets, permissions
 from order.models import Errand
-from order.serializers import ErrandSerializer, OrderSerializer
-from rest_framework.parsers import MultiPartParser, FormParser
+from order.serializers import ErrandListMinimalSerializer, ErrandSerializer, OrderSerializer
+from django_filters.rest_framework import DjangoFilterBackend
 
 
 # Create your views here.
@@ -15,7 +15,6 @@ class ErrandViewSet(viewsets.ModelViewSet):
     queryset = Errand.objects.all()
     serializer_class = ErrandSerializer
     permission_classes = [permissions.IsAuthenticated]
-    # parser_classes = [MultiPartParser, FormParser]
 
     def perform_create(self, serializer):
         # Also works — same as overriding create() in serializer
@@ -29,25 +28,73 @@ class ErrandViewSet(viewsets.ModelViewSet):
         return Errand.objects.none()
     
 
-# class ErrandViewSet(viewsets.ModelViewSet):
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, permissions, viewsets
+
+class ErrandMinimalViewSet(viewsets.ModelViewSet):
+    serializer_class = ErrandListMinimalSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['reference_number']
+    ordering_fields = ['created_at']
+    ordering = ['-created_at']  # default ordering
+    filterset_fields = ['status']  # ✅ enables ?status=pending etc.
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = Errand.objects.all()
+        if user.role == 'client':
+            queryset = queryset.filter(client=user)
+        elif user.role == 'business':
+            queryset = queryset.filter(business=user)
+
+        # always return latest first
+        return queryset.order_by('-created_at')
+
+    
+
+# class ErrandMinimalViewSet(viewsets.ModelViewSet):
 #     queryset = Errand.objects.all()
-#     serializer_class = ErrandSerializer
+#     serializer_class = ErrandListMinimalSerializer
 #     permission_classes = [permissions.IsAuthenticated]
+#     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+#     search_fields = ["reference_number"]
+#     ordering_fields = ['created_at']
+#     filterset_fields = ['status']
 
-#     @action(detail=True, methods=['post'])
-#     def respond(self, request, pk=None):
-#         """Business accepts or rejects an errand."""
-#         errand = self.get_object()
-#         if request.user != errand.business:
-#             return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+#     def get_queryset(self):
+#         user = self.request.user
+#         if user.role == 'client':
+#             return Errand.objects.filter(client=user)
+#         elif user.role == 'business':
+#             return Errand.objects.filter(business=user)
+#         return Errand.objects.none()
+    
+#     def get_queryset(self):
+#         return Errand.objects.all().order_by('-created_at')
 
-#         decision = request.data.get('decision')
-#         if decision not in ['accepted', 'rejected']:
-#             return Response({'error': 'Invalid decision'}, status=status.HTTP_400_BAD_REQUEST)
 
-#         errand.status = decision
-#         errand.save()
-#         return Response({'message': f'Errand {decision} successfully.'})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
