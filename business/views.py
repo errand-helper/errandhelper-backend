@@ -11,6 +11,10 @@ from django.db.models import Q
 from rest_framework.views import APIView
 from django.db.models import Count
 
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+from django.views.decorators.vary import vary_on_cookie, vary_on_headers
+
 
 class ServicePagination(PageNumberPagination):
     page_size = 10
@@ -63,8 +67,14 @@ class BusinessInfoViewSet(viewsets.ModelViewSet):
     serializer_class = BusinessInfoSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    @method_decorator(cache_page(60 * 15 * 2,key_prefix='businessinfo'))
+    def list(self,request,*args,**kwargs):
+        return super().list(request,*args,**kwargs)
+
     def get_queryset(self):
         # User can only see their own business
+        # import time
+        # time.sleep(2)
         return BusinessInfo.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
@@ -165,6 +175,10 @@ class PublicBusinessListViewSet(viewsets.ReadOnlyModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     search_fields = ["business_name", "business_tagline"]
     filterset_class = BusinessInfoFilter
+
+    @method_decorator(cache_page(60 * 15 * 2,key_prefix='business_list'))
+    def list(self,request,*args,**kwargs):
+        return super().list(request,*args,**kwargs)
 
 
 class BusinessStatsView(APIView):

@@ -64,8 +64,8 @@ class SocialMedia(models.Model):
     facebook = models.URLField(blank=True)
     twitter = models.URLField(blank=True)
     linkedin = models.URLField(blank=True)
-    instagram = models.URLField()
-    website = models.URLField()
+    instagram = models.URLField(blank=True)
+    website = models.URLField(blank=True)
 
 
 class BusinessInfo(models.Model):
