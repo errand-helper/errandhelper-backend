@@ -1,6 +1,8 @@
 import os
 from rest_framework import serializers
 
+from business.models import Service
+from business.serializers import ServiceSerializer
 from media_location.models import Location
 from media_location.serializers import LocationSerializer
 from order.models import Errand, ErrandImage
@@ -63,6 +65,16 @@ class ErrandSerializer(serializers.ModelSerializer):
     start_date = serializers.DateTimeField(input_formats=["%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S"], required=False)
     stop_date = serializers.DateTimeField(input_formats=["%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S"], required=False)
 
+    service_ids = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=Service.objects.all(),
+        write_only=True,
+        required=False
+    )
+    
+    # For reading (GET)
+    services = ServiceSerializer(many=True, read_only=True)
+
     class Meta:
         model = Errand
         fields = '__all__'
@@ -71,13 +83,14 @@ class ErrandSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         locations_data = validated_data.pop('locations', [])
         images_data = validated_data.pop('images', [])
+        services_data = validated_data.pop('service_ids', [])
+
         validated_data.pop('client', None)
         errand = Errand.objects.create(client=self.context['request'].user, **validated_data)
-        
-        
-        # for loc_data in locations_data:
-        #     loc, _ = Location.objects.get_or_create(**loc_data)
-        #     errand.locations.add(loc)
+
+        if services_data:
+            errand.services.set(services_data)
+
         for loc_data in locations_data:
             loc = Location.objects.create(**loc_data)
             errand.locations.add(loc)
@@ -88,6 +101,8 @@ class ErrandSerializer(serializers.ModelSerializer):
             img_serializer.save(errand=errand)
 
         return errand
+    
+    
 
 
 class ErrandListMinimalSerializer(serializers.ModelSerializer):
@@ -95,7 +110,7 @@ class ErrandListMinimalSerializer(serializers.ModelSerializer):
     business_name = serializers.SerializerMethodField()
     class Meta:
         model = Errand
-        fields = ['reference_number','status','client_name', 'business_name','created_at','priority']
+        fields = ['id','reference_number','status','client_name', 'business_name','created_at','priority']
 
     def get_client_name(self, obj):
         """Return the full name of the client."""

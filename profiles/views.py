@@ -39,3 +39,5 @@ class ProfileImageView(RetrieveAPIView):
 
     def get_object(self):
         return Profile.objects.get(user=self.request.user) # type: ignore
+    
+

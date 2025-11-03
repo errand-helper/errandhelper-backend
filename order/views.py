@@ -9,6 +9,9 @@ from order.models import Errand
 from order.serializers import ErrandListMinimalSerializer, ErrandSerializer, OrderSerializer
 from django_filters.rest_framework import DjangoFilterBackend
 
+# from django_filters.rest_framework import DjangoFilterBackend
+# from rest_framework import filters, permissions, viewsets
+
 
 # Create your views here.
 class ErrandViewSet(viewsets.ModelViewSet):
@@ -27,9 +30,71 @@ class ErrandViewSet(viewsets.ModelViewSet):
             return Errand.objects.filter(business=user)
         return Errand.objects.none()
     
+     # ✅ Custom action to accept errand
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def accept(self, request, pk=None):
+        errand = self.get_object()
 
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, permissions, viewsets
+        # Only the assigned business can accept
+        if request.user != errand.business:
+            return Response({'error': 'You are not authorized to accept this errand.'},
+                            status=status.HTTP_403_FORBIDDEN)
+        errand.status = 'in_progress'
+        errand.save()
+
+        serializer = self.get_serializer(errand)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def reject(self, request, pk=None):
+        errand = self.get_object()
+
+        if request.user != errand.business:
+            return Response({'error': 'You are not authorized to reject this errand.'},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        errand.status = 'rejected'
+        errand.save()
+
+        serializer = self.get_serializer(errand)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    # ✅ Complete errand (business or client)
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def complete(self, request, pk=None):
+        errand = self.get_object()
+        if request.user not in [errand.client, errand.business]:
+            return Response({'error': 'You are not authorized to complete this errand.'},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        if errand.status != 'in_progress':
+            return Response({'error': 'Only errands in progress can be completed.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        errand.status = 'completed'
+        errand.save()
+        return Response(self.get_serializer(errand).data, status=status.HTTP_200_OK)
+
+    # ✅ Cancel errand (client only)
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def cancel(self, request, pk=None):
+        errand = self.get_object()
+        if request.user != errand.client:
+            return Response({'error': 'You are not authorized to cancel this errand.'},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        if errand.status not in ['pending', 'in_progress']:
+            return Response({'error': 'Only pending or active errands can be cancelled.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        errand.status = 'cancelled'
+        errand.save()
+        return Response(self.get_serializer(errand).data, status=status.HTTP_200_OK)
+
+
+    
+
 
 class ErrandMinimalViewSet(viewsets.ModelViewSet):
     serializer_class = ErrandListMinimalSerializer
@@ -53,25 +118,13 @@ class ErrandMinimalViewSet(viewsets.ModelViewSet):
 
     
 
-# class ErrandMinimalViewSet(viewsets.ModelViewSet):
-#     queryset = Errand.objects.all()
-#     serializer_class = ErrandListMinimalSerializer
-#     permission_classes = [permissions.IsAuthenticated]
-#     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-#     search_fields = ["reference_number"]
-#     ordering_fields = ['created_at']
-#     filterset_fields = ['status']
 
-#     def get_queryset(self):
-#         user = self.request.user
-#         if user.role == 'client':
-#             return Errand.objects.filter(client=user)
-#         elif user.role == 'business':
-#             return Errand.objects.filter(business=user)
-#         return Errand.objects.none()
-    
-#     def get_queryset(self):
-#         return Errand.objects.all().order_by('-created_at')
+
+
+
+
+
+
 
 
 

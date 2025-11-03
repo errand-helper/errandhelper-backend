@@ -8,6 +8,7 @@ from authentication.models import User
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 
+from business.models import Service
 from media_location.models import Location
 
 
@@ -31,7 +32,6 @@ class Errand(models.Model):
 
     STATUS_CHOICES = [
         ('pending', 'Pending'),       
-        ('accepted', 'Accepted'),     
         ('rejected', 'Rejected'),     
         ('in_progress', 'In Progress'),
         ('completed', 'Completed'),
@@ -55,14 +55,24 @@ class Errand(models.Model):
     contact_preference = models.CharField(max_length=50, default='platform')
     agree_terms = models.BooleanField(default=False)
     agree_escrow = models.BooleanField(default=False)
-    services = models.JSONField(default=list, blank=True)
+    services = models.ManyToManyField(
+        Service,
+        related_name='errands',
+        blank=True
+    )
+
+    # services = models.ForeignKey(
+    #     Service,
+    #     on_delete=models.CASCADE,
+    #     related_name='services',
+    #     null=True, blank=True
+    # )
     milestones = models.JSONField(default=list, blank=True)
 
     client = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
         related_name='posted_errands',
-        # limit_choices_to={'role': 'client'}
     )
 
     business = models.ForeignKey(
@@ -95,7 +105,7 @@ class ErrandImage(models.Model):
         on_delete=models.CASCADE,
         related_name='images'
     )
-    image_url = models.URLField(max_length=500)
+    image_url = models.URLField(max_length=500,blank=True,null=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

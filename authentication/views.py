@@ -3,12 +3,15 @@ from rest_framework import generics, permissions
 from django.contrib.auth import get_user_model
 # from .models import ClientProfile
 from .serializers import (
+    RoleSerializer,
     UserSignupSerializer,
 )
 # accounts/views.py
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
+from rest_framework.generics import RetrieveAPIView
+from rest_framework.permissions import IsAuthenticated
 
 
 User = get_user_model()
@@ -77,6 +80,41 @@ class SignupView(generics.CreateAPIView):
                 'message': f'An error occurred: {str(e)}',
                 'errors': {}
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+class RoleView(RetrieveAPIView):
+    serializer_class = RoleSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        # Return the current user
+        return self.request.user 
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # class ClientProfileView(generics.RetrieveUpdateAPIView):
