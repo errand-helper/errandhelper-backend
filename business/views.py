@@ -168,17 +168,17 @@ class FrequentlyAskedQuestionViewSet(viewsets.ModelViewSet):
 
 
 class PublicBusinessListViewSet(viewsets.ReadOnlyModelViewSet):
-    # queryset = BusinessInfo.objects.all()
-    queryset = BusinessInfo.objects.all().distinct()
+    queryset = BusinessInfo.objects.filter(available=True, is_verified=True)
+    # queryset = BusinessInfo.objects.all().distinct()
     serializer_class = PublicBusinessListSerializer
     permission_classes = [permissions.AllowAny]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     search_fields = ["business_name", "business_tagline"]
     filterset_class = BusinessInfoFilter
 
-    @method_decorator(cache_page(60 * 15 * 2,key_prefix='business_list'))
-    def list(self,request,*args,**kwargs):
-        return super().list(request,*args,**kwargs)
+    # @method_decorator(cache_page(60 * 15,key_prefix='business_list'))
+    # def list(self,request,*args,**kwargs):
+    #     return super().list(request,*args,**kwargs)
 
 
 class BusinessStatsView(APIView):

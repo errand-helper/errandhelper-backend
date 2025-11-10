@@ -8,9 +8,8 @@ from rest_framework import viewsets, permissions
 from order.models import Errand
 from order.serializers import ErrandListMinimalSerializer, ErrandSerializer, OrderSerializer
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.exceptions import ValidationError
 
-# from django_filters.rest_framework import DjangoFilterBackend
-# from rest_framework import filters, permissions, viewsets
 
 
 # Create your views here.
@@ -20,8 +19,17 @@ class ErrandViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
-        # Also works — same as overriding create() in serializer
+        business = serializer.validated_data.get('business')
+
+        # Prevent user from assigning errand to themselves
+        if self.request.user == business:
+            raise ValidationError({"error": "You cannot assign yourself an errand."})
+        
+        # if self.request.user.role != 'client':
+        #     raise ValidationError({"error": "Only clients can create errands."})
+
         serializer.save(client=self.request.user)
+
     def get_queryset(self):
         user = self.request.user
         if user.role == 'client':
@@ -42,8 +50,9 @@ class ErrandViewSet(viewsets.ModelViewSet):
         errand.status = 'in_progress'
         errand.save()
 
-        serializer = self.get_serializer(errand)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        # serializer = self.get_serializer(errand) 
+        # serializer.data
+        return Response({'success': 'You have successfully accepted the errand state.'}, status=status.HTTP_200_OK)
     
     
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
@@ -57,13 +66,20 @@ class ErrandViewSet(viewsets.ModelViewSet):
         errand.status = 'rejected'
         errand.save()
 
-        serializer = self.get_serializer(errand)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        # serializer = self.get_serializer(errand)
+        # serializer.data
+        return Response({'success': 'You have successfully rejected the errand.'}, status=status.HTTP_200_OK)
     
     # ✅ Complete errand (business or client)
-    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    # Use url_path='completed' to match frontend calling /completed/
+    @action(detail=True, methods=['post', 'get'], permission_classes=[permissions.IsAuthenticated], url_path='completed')
     def complete(self, request, pk=None):
         errand = self.get_object()
+
+        # For GET, just return current data to avoid 404s from accidental navigations
+        if request.method == 'GET':
+            return Response(self.get_serializer(errand).data, status=status.HTTP_200_OK)
+
         if request.user not in [errand.client, errand.business]:
             return Response({'error': 'You are not authorized to complete this errand.'},
                             status=status.HTTP_403_FORBIDDEN)
@@ -74,7 +90,7 @@ class ErrandViewSet(viewsets.ModelViewSet):
 
         errand.status = 'completed'
         errand.save()
-        return Response(self.get_serializer(errand).data, status=status.HTTP_200_OK)
+        return Response({'success': 'You have successfully completed the errand.'}, status=status.HTTP_200_OK)
 
     # ✅ Cancel errand (client only)
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
@@ -90,7 +106,7 @@ class ErrandViewSet(viewsets.ModelViewSet):
 
         errand.status = 'cancelled'
         errand.save()
-        return Response(self.get_serializer(errand).data, status=status.HTTP_200_OK)
+        return Response({'success': 'You have successfully cancelled the errand.'}, status=status.HTTP_200_OK)
 
 
     

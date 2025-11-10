@@ -87,6 +87,7 @@ class PublicBusinessListSerializer(serializers.ModelSerializer):
             "services",
             # "frequently_asked_questions",
             "available",
+            "is_verified",
             # "social_links"
         ]
 
