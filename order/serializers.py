@@ -62,8 +62,13 @@ class ErrandImageSerializer(serializers.ModelSerializer):
 class ErrandSerializer(serializers.ModelSerializer):
     locations = LocationSerializer(many=True) 
     images = ErrandImageSerializer(many=True, required=False)
-    start_date = serializers.DateTimeField(input_formats=["%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S"], required=False)
-    stop_date = serializers.DateTimeField(input_formats=["%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S"], required=False)
+    # start_date = serializers.DateTimeField(input_formats=["%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S"], required=False)
+    # stop_date = serializers.DateTimeField(input_formats=["%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S"], required=False)
+    start_date = serializers.DateTimeField(required=False)
+    stop_date = serializers.DateTimeField(required=False)
+
+    business_name = serializers.CharField(source='business.business_info.business_name', read_only=True)
+    business_id = serializers.UUIDField(source='business.business_info.id', read_only=True)
 
     service_ids = serializers.PrimaryKeyRelatedField(
         many=True,
@@ -101,6 +106,42 @@ class ErrandSerializer(serializers.ModelSerializer):
             img_serializer.save(errand=errand)
 
         return errand
+    
+
+    def update(self, instance, validated_data):
+        locations_data = validated_data.pop('locations', None)
+        images_data = validated_data.pop('images', None)
+        services_data = validated_data.pop('service_ids', None)
+
+        # Update scalar fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        # Update services (ManyToMany)
+        if services_data is not None:
+            instance.services.set(services_data)
+
+        # Update locations (ManyToMany with model creation)
+        if locations_data is not None:
+            # delete old locations to avoid orphaned records
+            instance.locations.all().delete()
+            for loc_data in locations_data:
+                loc = Location.objects.create(**loc_data)
+                instance.locations.add(loc)
+
+        # Update images (append new ones only)
+        if images_data is not None:
+            for img_data in images_data:
+                serializer = ErrandImageSerializer(
+                    data=img_data,
+                    context=self.context
+                )
+                serializer.is_valid(raise_exception=True)
+                serializer.save(errand=instance)
+
+        return instance
+        
     
     
 

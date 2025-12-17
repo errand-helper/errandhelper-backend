@@ -11,12 +11,23 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.exceptions import ValidationError
 
 
+from rest_framework.permissions import BasePermission
+
+class IsErrandOwnerOrBusiness(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        return (
+            obj.client == request.user or
+            obj.business == request.user
+        )
+
+
+
 
 # Create your views here.
 class ErrandViewSet(viewsets.ModelViewSet):
     queryset = Errand.objects.all()
     serializer_class = ErrandSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated,IsErrandOwnerOrBusiness]
 
     def perform_create(self, serializer):
         business = serializer.validated_data.get('business')
@@ -29,6 +40,26 @@ class ErrandViewSet(viewsets.ModelViewSet):
         #     raise ValidationError({"error": "Only clients can create errands."})
 
         serializer.save(client=self.request.user)
+
+    def perform_update(self, serializer):
+        business = serializer.validated_data.get('business')
+
+        if business and self.request.user == business:
+            raise ValidationError({
+                "error": "You cannot assign yourself an errand."
+            })
+
+        serializer.save()
+    
+
+    # def perform_update(self, serializer):
+    #     business = serializer.validated_data.get('business')
+
+    #     # Prevent user from assigning errand to themselves
+    #     if self.request.user == business:
+    #         raise ValidationError({"error": "You cannot assign yourself an errand."})
+
+    #     serializer.save()
 
     def get_queryset(self):
         user = self.request.user
