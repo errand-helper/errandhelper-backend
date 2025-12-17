@@ -27,7 +27,7 @@ class Errand(models.Model):
     PAYMENT_METHOD_CHOICES = [
         ('card', 'Card'),
         ('platform', 'Platform'),
-        ('bank','Bank')
+        ('mpesa','MPESA')
     ]
 
     STATUS_CHOICES = [
@@ -61,12 +61,7 @@ class Errand(models.Model):
         blank=True
     )
 
-    # services = models.ForeignKey(
-    #     Service,
-    #     on_delete=models.CASCADE,
-    #     related_name='services',
-    #     null=True, blank=True
-    # )
+    paid = models.BooleanField(default=False)
     milestones = models.JSONField(default=list, blank=True)
 
     client = models.ForeignKey(
