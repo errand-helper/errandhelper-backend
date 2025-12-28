@@ -1,151 +1,169 @@
 from rest_framework import serializers
-
-from authentication.models import User,UserTypes
-from authentication.serializers import UserSerializer
-# from profiles.models import Location, SocialMedia
-from service.models import Category
-from service.serializers import CategorySerializer
-
-from .models import Business, BusinessCategory
+from .models import BusinessInfo, FrequentlyAskedQuestion, Service, ServiceArea, SocialMedia
 
 
-
-
-
-
-
-
-class BusinessRegisterSerializer(serializers.ModelSerializer):
-    id = serializers.UUIDField(read_only=True)
-    business_name = serializers.CharField()
-    registration_number = serializers.CharField()
-    # activation_fee = serializers.IntegerField()
-
-    email = serializers.EmailField(write_only=True)
-    first_name = serializers.CharField(write_only=True)
-    id_number = serializers.CharField(write_only=True)
-    last_name = serializers.CharField(write_only=True)
-    password = serializers.CharField(write_only=True)
-    confirm_password = serializers.CharField(write_only=True)
-
-    user = UserSerializer(read_only=True)  # Include user details in the response
-   
-
+class SocialMediaSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Business
-        fields = [
-            "id","first_name","last_name","id_number","email","password",'confirm_password',"business_name", "business_name","registration_number","user"
-        ]
-
-    def validate(self, attrs):
-        if attrs['password'] != attrs['confirm_password']:
-            raise serializers.ValidationError({"password":"Passwords do not match"})
-        return super().validate(attrs)
-    
-    def create(self, validated_data):
-        # Extract user-related data
-        user_data = {
-            'first_name': validated_data.pop('first_name'),
-            'last_name': validated_data.pop('last_name'),
-            'id_number': validated_data.pop('id_number'),
-            'email': validated_data.pop('email'),
-            'password': validated_data.pop('password'),
-        }
-        validated_data.pop('confirm_password')  # Remove confirm_password, not needed for creating a user
-
-        # Create the User instance
-        user = User.objects.create_user(**user_data)
-        user.set_password(user_data['password'])
-        user.user_type = UserTypes.BUSINESS
-        user.save()
-
-        # Create Location instance
-        # location_data = validated_data.pop('location')
-        # location = Location.objects.create(**location_data)
-
-        # Create SocialMedia instance
-        # social_media_data = validated_data.pop('social_media')
-        # social_media = SocialMedia.objects.create(**social_media_data)
-
-        # Create the Business instance with the created user, location, and social media
-        business = Business.objects.create( #type:ignore
-            user=user,
-            # location=location,
-            # social_media=social_media,
-            **validated_data
-        )
-
-        return business
-
-
-    # def create(self, validated_data):
-    #     user_data = {
-    #         'first_name': validated_data['first_name'],
-    #         'last_name': validated_data['last_name'],
-    #         'email': validated_data['email'],
-    #         'password': validated_data['password'],
-    #     }
-
-    #     user = User.objects.create_user(**user_data)
-    #     user.set_password(validated_data['password'])
-
-    #     user.user_type = UserTypes.BUSINESS
-    #     user.save()
-
-
-    #     validated_data.pop('first_name')
-    #     validated_data.pop('last_name')
-    #     validated_data.pop('email')
-    #     validated_data.pop('password')
-    #     validated_data.pop('confirm_password')
-
-
-    #     business = Business.objects.create(user=user,**validated_data)
-    #     return business
-    
-class BusinessRetrieve(serializers.ModelSerializer):
-
-     class Meta:
-        model = Business
+        model = SocialMedia
         fields = '__all__'
 
 
-class BusinessCategorySerializer(serializers.ModelSerializer):
-    categories = CategorySerializer(many=True, read_only=True)
-    category_ids = serializers.PrimaryKeyRelatedField(
-        queryset=Category.objects.all(), write_only=True, many=True
-    )
+class BusinessInfoSerializer(serializers.ModelSerializer):
+    social_links = SocialMediaSerializer(required=False)
 
     class Meta:
-        model = BusinessCategory
-        fields = ['id', 'business', 'categories', 'category_ids']
+        model = BusinessInfo
+        fields = '__all__'
+        read_only_fields = ['user']
 
     def create(self, validated_data):
-        # Extract category IDs and business from validated_data
-        category_ids = validated_data.pop('category_ids')
-        business = validated_data.pop('business')
+        social_data = validated_data.pop('social_links', None)
+        if social_data:
+            social = SocialMedia.objects.create(**social_data)
+            validated_data['social_links'] = social
+        return BusinessInfo.objects.create(**validated_data)
 
-        # Create the BusinessCategory instance
-        business_category = BusinessCategory.objects.create(business=business, **validated_data)
-
-        # Set the categories for the BusinessCategory instance
-        business_category.categories.set(category_ids)
-
-        return business_category
-    
     def update(self, instance, validated_data):
-        # Get new category IDs from validated_data
-        category_ids = validated_data.pop('category_ids', None)
-
-        # Update business field if present
-        instance.business = validated_data.get('business', instance.business)
-
-        # If category IDs are provided, update the related categories
-        if category_ids is not None:
-            instance.categories.set(category_ids)
-
-        # Save the updated instance
+        social_data = validated_data.pop('social_links', None)
+        if social_data:
+            if instance.social_links:
+                for attr, value in social_data.items():
+                    setattr(instance.social_links, attr, value)
+                instance.social_links.save()
+            else:
+                instance.social_links = SocialMedia.objects.create(
+                    **social_data)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
         instance.save()
         return instance
+
+
+class ServiceSerializer(serializers.ModelSerializer):
+    category = serializers.CharField(source="category.name", read_only=True)
+
+    class Meta:
+        model = Service
+        fields = '__all__'
+
+
+class ServiceAreaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ServiceArea
+        fields = '__all__'
+
+
+class FrequentlyAskedQuestionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FrequentlyAskedQuestion
+        # fields = '__all__'
+        fields = [
+            'id','question','answer'
+        ]
+
+
+class PublicBusinessListSerializer(serializers.ModelSerializer):
+    category = serializers.SerializerMethodField()
+    service_areas = serializers.SerializerMethodField()
+    services = serializers.SerializerMethodField()
+    # frequently_asked_questions = serializers.SerializerMethodField()
+    business_logo = serializers.SerializerMethodField()
+    # social_links = serializers.SerializerMethodField()
+
+
+    class Meta:
+        model = BusinessInfo
+        fields = [
+            "id",
+            "business_name",
+            "business_logo",
+            "user",
+            # "business_phone",
+            # "business_email",
+            "business_tagline",
+            # "business_description",
+            "category",
+            "service_areas",
+            "services",
+            # "frequently_asked_questions",
+            "available",
+            "is_verified",
+            # "social_links"
+        ]
+
+    def get_category(self, obj):
+        # Get distinct categories from related services
+        return list(obj.user.services.values_list("category__name", flat=True).distinct())
+
+    def get_service_areas(self, obj):
+        # Get distinct service areas
+        return list(obj.user.service_area.values_list("area_name", flat=True).distinct())
+
+    def get_services(self, obj):
+        services = obj.user.services.values("id", "name","category","price_type","price_from","price_to").distinct()
+        return list(services)
     
+    # def get_frequently_asked_questions(self, obj):
+    #     faqs = obj.user.frequently_asked_question.values("id", "question", "answer").distinct()
+    #     return list(faqs)
     
+    def get_business_logo(self, obj):
+        request = self.context.get("request")
+        if obj.business_logo:
+            return request.build_absolute_uri(obj.business_logo.url)
+        return None
+    
+    # def get_social_links(self, obj):
+    #     if obj.social_links:
+    #         return {
+    #             "facebook": obj.social_links.facebook,
+    #             "instagram": obj.social_links.instagram,
+    #             "twitter": obj.social_links.twitter,
+    #             "linkedin": obj.social_links.linkedin,
+    #             "website": obj.social_links.website,
+    #         }
+    #     return None
+
+
+class PublicBusinessDetailSerializer(serializers.ModelSerializer):
+    social_links = SocialMediaSerializer()
+    services = ServiceSerializer(source="user.services", many=True)
+    service_area = ServiceAreaSerializer(source="user.service_area", many=True)
+    frequently_asked_question = FrequentlyAskedQuestionSerializer(
+        source="user.frequently_asked_question", many=True
+    )
+    class Meta:
+        model = BusinessInfo
+        fields = "__all__"
+
+class PublicBusinessDetailLiteSerializer(serializers.ModelSerializer):
+    services = ServiceSerializer(source="user.services", many=True)
+    class Meta:
+        model = BusinessInfo
+        fields = [
+            "id",
+            "business_name",
+            "business_logo",
+            "user",
+            "available",
+            "services",
+        ]
+
+
+class CategoryStatsSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    business_count = serializers.IntegerField()
+
+
+class ServiceAreaStatsSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    area_name = serializers.CharField()
+    business_count = serializers.IntegerField()
+
+
+class AvailabilitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BusinessInfo
+        fields = ["available"]
+
