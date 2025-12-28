@@ -80,8 +80,15 @@ INSTALLED_APPS = [
 ]
 
 if USE_S3:
-    # if "storages" not in INSTALLED_APPS:
+    USE_S3 = os.getenv("USE_S3") == "true"
+
+if USE_S3:
+    AWS_S3_REGION_NAME = os.getenv("AWS_REGION")
+    AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME")
     INSTALLED_APPS += ["storages"]
+
+#     # if "storages" not in INSTALLED_APPS:
+#     INSTALLED_APPS += ["storages"]
 
 
 MIDDLEWARE = [
