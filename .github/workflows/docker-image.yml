@@ -16,6 +16,7 @@ jobs:
     needs: [test_django]
     env:
       DJANGO_SECRET_KEY: test-key-not-good-maybe-make-one-better
+      USE_S3: "false"
     steps:
     - name: Checkout
       uses: actions/checkout@v4

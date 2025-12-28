@@ -42,6 +42,8 @@ if "testserver" not in ALLOWED_HOSTS:
 
 CSRF_TRUSTED_ORIGINS = os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS","http://127.0.0.1",).split(",")
 
+USE_S3 = os.getenv("USE_S3", "False").lower() == "true"
+
 
 CORS_ORIGIN_ALLOW_ALL = True  # Or use CORS_ORIGIN_WHITELIST for specific origins
     
@@ -66,7 +68,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'corsheaders',
     'channels',
-    'storages',
+    # 'storages',
 
     'authentication',
     'business',
@@ -76,6 +78,11 @@ INSTALLED_APPS = [
     'media_location',
     'chat',
 ]
+
+if USE_S3:
+    # if "storages" not in INSTALLED_APPS:
+    INSTALLED_APPS += ["storages"]
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
