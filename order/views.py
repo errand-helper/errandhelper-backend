@@ -1,4 +1,3 @@
-from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -6,12 +5,19 @@ from rest_framework import status,filters
 from rest_framework.decorators import action
 from rest_framework import viewsets, permissions
 from order.models import Errand
-from order.serializers import ErrandListMinimalSerializer, ErrandSerializer, OrderSerializer
+from order.mpesa_stk import MpesaSTKService
+from order.serializers import ErrandListMinimalSerializer, ErrandSerializer, InitiateMpesaPaymentSerializer, OrderSerializer
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.exceptions import ValidationError
 
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from .mpesa_callback import MpesaCallbackService
+import json
 
 from rest_framework.permissions import BasePermission
+from order.utils import format_phone_number
+
 
 class IsErrandOwnerOrBusiness(BasePermission):
     def has_object_permission(self, request, view, obj):
@@ -19,8 +25,6 @@ class IsErrandOwnerOrBusiness(BasePermission):
             obj.client == request.user or
             obj.business == request.user
         )
-
-
 
 
 # Create your views here.
@@ -138,10 +142,7 @@ class ErrandViewSet(viewsets.ModelViewSet):
         errand.status = 'cancelled'
         errand.save()
         return Response({'success': 'You have successfully cancelled the errand.'}, status=status.HTTP_200_OK)
-
-
     
-
 
 class ErrandMinimalViewSet(viewsets.ModelViewSet):
     serializer_class = ErrandListMinimalSerializer
@@ -162,13 +163,75 @@ class ErrandMinimalViewSet(viewsets.ModelViewSet):
 
         # always return latest first
         return queryset.order_by('-created_at')
-
     
 
 
 
+class InitiatePaymentAPIView(APIView):
+    def post(self, request):
+        serializer = InitiateMpesaPaymentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        errand = Errand.objects.get(id=serializer.validated_data['errand_id'])
+        phone = format_phone_number(serializer.validated_data['phone_number'])
+        amount = serializer.validated_data['amount']
+
+        service = MpesaSTKService()
+        response = service.initiate_payment(
+            errand=errand,
+            phone_number=phone,
+            amount=amount,
+        )
+
+        return Response(response, status=status.HTTP_200_OK)
 
 
+
+
+
+
+
+
+
+# class InitiatePaymentAPIView(APIView):
+#     def post(self, request):
+#         errand_id = request.data.get("errand_id")
+#         phone = request.data.get("phone_number")
+#         amount = request.data.get("amount")
+
+#         errand = Errand.objects.get(id=errand_id)
+#         phone = format_phone_number(phone)
+
+#         service = MpesaSTKService()
+#         response = service.initiate_payment(
+#             errand=errand,
+#             phone_number=phone,
+#             amount=amount,
+#         )
+
+#         return Response(response, status=status.HTTP_200_OK)
+    
+
+
+
+@csrf_exempt
+def mpesa_callback_view(request):
+    payload = json.loads(request.body)
+    MpesaCallbackService().process_stk_callback(payload)
+
+    return JsonResponse({
+        "ResultCode": 0,
+        "ResultDesc": "Accepted"
+    })
+
+
+
+class STKStatusAPIView(APIView):
+    def post(self, request):
+        checkout_id = request.data.get("checkout_request_id")
+        service = MpesaSTKService()
+        status = service.query_status(checkout_id)
+        return Response(status)
 
 
 

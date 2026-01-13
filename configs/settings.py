@@ -348,3 +348,11 @@ CACHES = {
 # Optional: This is to ensure Django sessions are stored in Redis
 SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
 SESSION_CACHE_ALIAS = 'default'
+
+# M-Pesa Configuration
+MPESA_BASE_URL = os.getenv("MPESA_BASE_URL", "")
+MPESA_SHORTCODE = os.getenv("MPESA_SHORTCODE", "")
+MPESA_PASSKEY = os.getenv("MPESA_PASSKEY", "")
+CALLBACK_URL = os.getenv("MPESA_CALLBACK_URL", "")
+CONSUMER_KEY = os.getenv("MPESA_CONSUMER_KEY", "")
+CONSUMER_SECRET = os.getenv("MPESA_CONSUMER_SECRET", "")
