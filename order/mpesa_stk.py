@@ -1,4 +1,6 @@
 import base64
+from urllib.parse import urlparse
+
 import requests
 from django.conf import settings
 from django.utils import timezone
@@ -21,26 +23,76 @@ class MpesaSTKService:
         return base64.b64encode(raw.encode()).decode(), timestamp
 
     def _get_access_token(self):
-        credentials = f"{self.consumer_key}:{self.consumer_secret}"
-        encoded = base64.b64encode(credentials.encode()).decode()
+        """Fetch an OAuth access token from Safaricom.
 
-        response = requests.get(
-            f"{self.base_url}/oauth/v1/generate?grant_type=client_credentials",
-            headers={"Authorization": f"Basic {encoded}"},
-            timeout=30,
-        )
-        
-        response.raise_for_status()
-        
+        Handles:
+        - Missing configuration
+        - Non-200 responses (surfacing Safaricom error body)
+        - Invalid / non-JSON bodies
+        """
+
+        # Fail fast if configuration is missing
+        # if not self.base_url:
+        #     raise ValueError("MPESA_BASE_URL is not configured. Check your environment variables.")
+        # if not self.consumer_key or not self.consumer_secret:
+        #     raise ValueError(
+        #         "M-Pesa consumer credentials are not configured. "
+        #         "Set MPESA_CONSUMER_KEY and MPESA_CONSUMER_SECRET in your environment."
+        #     )
+
+        # parsed = urlparse(self.base_url)
+        # if not parsed.scheme or not parsed.netloc:
+        #     raise ValueError(
+        #         "MPESA_BASE_URL is invalid. Expected something like 'https://sandbox.safaricom.co.ke', "
+        #         f"got {self.base_url!r}."
+        #     )
+        # if parsed.path not in ("", "/") or parsed.query or parsed.params:
+        #     raise ValueError(
+        #         "MPESA_BASE_URL must NOT include path or query parameters. "
+        #         "Use only the base domain, e.g. 'https://sandbox.safaricom.co.ke'. "
+        #         f"Current value: {self.base_url!r}"
+        #     )
+
+        credentials = f"{self.consumer_key}:{self.consumer_secret}"
+        encoded_credentials = base64.b64encode(credentials.encode()).decode()
+
+        headers = {
+            "Authorization": f"Basic {encoded_credentials}",
+            "Content-Type": "application/json",
+        }
+
+        try:
+            response = requests.get(
+                f"{self.base_url}/oauth/v1/generate?grant_type=client_credentials",
+                headers=headers,
+                timeout=15,
+            )
+        except requests.RequestException as e:
+            # Network / DNS / SSL issues etc.
+            raise ValueError(f"Failed to connect to M-Pesa token endpoint: {str(e)}")
+
+        # If Safaricom returns a 4xx/5xx, surface the body to help debugging
+        if not response.ok:
+            snippet = response.text[:500]
+            raise ValueError(
+                f"Failed to obtain M-Pesa access token. "
+                f"Status: {response.status_code}, Body: {snippet}"
+            )
+
         try:
             data = response.json()
         except requests.exceptions.JSONDecodeError:
-            raise ValueError(f"Failed to decode M-Pesa access token response. Status: {response.status_code}, Body: {response.text}")
+            raise ValueError(
+                "Failed to decode M-Pesa access token response. "
+                f"Status: {response.status_code}, Body: {response.text[:500]}"
+            )
 
-        if "access_token" not in data:
+        access_token = data.get("access_token")
+        if not access_token:
             raise ValueError(f"Access token missing in M-Pesa response: {data}")
 
-        return data["access_token"]
+        return access_token
+
 
     def initiate_payment(self, *, errand: Errand, phone_number: str, amount: float):
         password, timestamp = self._password()
@@ -94,6 +146,39 @@ class MpesaSTKService:
         errand.save(update_fields=["status"])
 
         return data
+    
+
+
+    # def query_status(self, checkout_id: str) -> dict:
+    #     """Return the status of an STK push for the given CheckoutRequestID.
+
+    #     This implementation relies on the MpesaTransaction record that was
+    #     created when the STK push was initiated and (optionally) updated by
+    #     the callback handler. It does **not** call Safaricom's query API, but
+    #     simply exposes what we currently know in our database.
+    #     """
+    #     if not checkout_id:
+    #         return {
+    #             "status": "error",
+    #             "detail": "checkout_request_id is required",
+    #         }
+
+    #     try:
+    #         txn = MpesaTransaction.objects.get(checkoutRequestID=checkout_id)
+    #     except MpesaTransaction.DoesNotExist:
+    #         return {
+    #             "status": "not_found",
+    #             "checkout_request_id": checkout_id,
+    #         }
+
+    #     return {
+    #         "status": txn.status,
+    #         "checkout_request_id": txn.checkoutRequestID,
+    #         "merchant_request_id": txn.merchantRequestID,
+    #         "mpesa_receipt_number": txn.mpesaReceiptNumber,
+    #         "amount": str(txn.amount),
+    #         "direction": txn.direction,
+    #     }
 
 
 
@@ -103,146 +188,3 @@ class MpesaSTKService:
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# import base64
-# import requests
-# import re
-# from django.conf import settings
-# from django.utils import timezone
-# from .models import MpesaTransaction
-# from .models import Errand
-
-
-# class MpesaSTKService:
-#     def __init__(self):
-#         self.base_url = settings.MPESA_BASE_URL
-#         self.shortcode = settings.MPESA_SHORTCODE
-#         self.passkey = settings.MPESA_PASSKEY
-#         self.callback_url = settings.MPESA_CALLBACK_URL
-#         self.consumer_key = settings.CONSUMER_KEY
-#         self.consumer_secret = settings.CONSUMER_SECRET
-
-#     # -----------------------
-#     # Utilities
-#     # -----------------------
-
-#     def format_phone(self, phone: str) -> str:
-#         phone = phone.replace("+", "")
-#         if re.match(r"^254\d{9}$", phone):
-#             return phone
-#         if phone.startswith("0") and len(phone) == 10:
-#             return f"254{phone[1:]}"
-#         raise ValueError("Invalid phone number format")
-
-#     def _password(self):
-#         timestamp = timezone.now().strftime("%Y%m%d%H%M%S")
-#         data = f"{self.shortcode}{self.passkey}{timestamp}"
-#         password = base64.b64encode(data.encode()).decode()
-#         return password, timestamp
-
-#     def _get_access_token(self) -> str:
-#         credentials = f"{self.consumer_key}:{self.consumer_secret}"
-#         encoded = base64.b64encode(credentials.encode()).decode()
-
-#         headers = {
-#             "Authorization": f"Basic {encoded}",
-#             "Content-Type": "application/json",
-#         }
-
-#         response = requests.get(
-#             f"{self.base_url}/oauth/v1/generate?grant_type=client_credentials",
-#             headers=headers,
-#             timeout=15,
-#         )
-#         response.raise_for_status()
-
-#         data = response.json()
-#         if "access_token" not in data:
-#             raise ValueError("Access token missing in M-Pesa response")
-
-#         return data["access_token"]
-
-#     # -----------------------
-#     # STK Push
-#     # -----------------------
-
-#     def initiate_payment(self, *, errand: Errand, phone_number: str, amount: float):
-#         phone_number = self.format_phone(phone_number)
-#         password, timestamp = self._password()
-
-#         mpesa_txn = MpesaTransaction.objects.create(
-#             errand=errand,
-#             phone_number=phone_number,
-#             amount=amount,
-#             direction="inbound",
-#             status="initiated",
-#         )
-
-#         payload = {
-#             "BusinessShortCode": self.shortcode,
-#             "Password": password,
-#             "Timestamp": timestamp,
-#             "TransactionType": "CustomerPayBillOnline",
-#             "Amount": int(amount),
-#             "PartyA": phone_number,
-#             "PartyB": self.shortcode,
-#             "PhoneNumber": phone_number,
-#             "CallBackURL": self.callback_url,
-#             "AccountReference": errand.reference_number,
-#             "TransactionDesc": f"Errand {errand.reference_number}",
-#         }
-
-#         headers = {
-#             "Authorization": f"Bearer {self._get_access_token()}",
-#             "Content-Type": "application/json",
-#         }
-
-#         response = requests.post(
-#             f"{self.base_url}/mpesa/stkpush/v1/processrequest",
-#             json=payload,
-#             headers=headers,
-#             timeout=30,
-#         )
-#         response.raise_for_status()
-
-#         data = response.json()
-
-#         mpesa_txn.checkout_request_id = data.get("CheckoutRequestID")
-#         mpesa_txn.merchant_request_id = data.get("MerchantRequestID")
-#         mpesa_txn.save(update_fields=["checkout_request_id", "merchant_request_id"])
-
-#         errand.status = "awaiting_payment"
-#         errand.save(update_fields=["status"])
-
-#         return data

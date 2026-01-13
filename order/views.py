@@ -183,36 +183,7 @@ class InitiatePaymentAPIView(APIView):
             amount=amount,
         )
 
-        return Response(response, status=status.HTTP_200_OK)
-
-
-
-
-
-
-
-
-
-# class InitiatePaymentAPIView(APIView):
-#     def post(self, request):
-#         errand_id = request.data.get("errand_id")
-#         phone = request.data.get("phone_number")
-#         amount = request.data.get("amount")
-
-#         errand = Errand.objects.get(id=errand_id)
-#         phone = format_phone_number(phone)
-
-#         service = MpesaSTKService()
-#         response = service.initiate_payment(
-#             errand=errand,
-#             phone_number=phone,
-#             amount=amount,
-#         )
-
-#         return Response(response, status=status.HTTP_200_OK)
-    
-
-
+        return Response(response, status=status.HTTP_200_OK)   
 
 @csrf_exempt
 def mpesa_callback_view(request):
