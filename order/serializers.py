@@ -178,19 +178,19 @@ class MpesaTransactionSerializer(serializers.ModelSerializer):
             'errand',
             'phoneNumber',
             'amount',
-            'checkoutRequestID',
-            'merchantRequestID',
-            'mpesaReceiptNumber',
+            # 'merchantRequestID',
+            # 'mpesaReceiptNumber',
             'direction',
             'status',
-            'rawCallback',
+            # 'rawCallback',
             'createdAt',
         ]
         read_only_fields = [
             'id',
             'status',
-            'mpesaReceiptNumber',
-            'rawCallback',
+            # 'mpesaReceiptNumber',
+            # 'checkoutRequestID',
+            # 'rawCallback',
             'createdAt',
         ]
 

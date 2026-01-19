@@ -31,26 +31,17 @@ class Errand(models.Model):
     ]
 
     STATUS_CHOICES = [
-        ('pending', 'Pending'),
-        ('rejected', 'Rejected'),
-        ('awaiting_payment', 'Awaiting Payment'),
-        ('funds_held', 'Funds Held'),
-        ('in_progress', 'In Progress'),
-        ('completed', 'Completed'),
-        ('verified', 'Verified'),
-        ('paid_out', 'Paid Out'),
-        ('disputed', 'Disputed'),
-        ('cancelled', 'Cancelled'),
+        ("unpaid", "Unpaid"),
+        ("pending", "Pending"),
+        ("held", "Paid and Held"),
+        ("released", "Released"),
+        ("refunded", "Refunded"),
+        ("completed", "Completed"),
+        ("cancelled", "Cancelled"),
     ]
 
 
-    # STATUS_CHOICES = [
-    #     ('pending', 'Pending'),       
-    #     ('rejected', 'Rejected'),     
-    #     ('in_progress', 'In Progress'),
-    #     ('completed', 'Completed'),
-    #     ('cancelled', 'Cancelled'),
-    # ]
+
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     reference_number = models.CharField(max_length=100, unique=True, editable=False)
@@ -91,7 +82,7 @@ class Errand(models.Model):
         limit_choices_to={'role': 'business'}
     )
 
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='unpaid')
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -136,15 +127,18 @@ class MpesaTransaction(models.Model):
     errand = models.ForeignKey(Errand, on_delete=models.CASCADE)
     phoneNumber = models.CharField(max_length=15)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
-    checkoutRequestID = models.CharField(max_length=100, blank=True)
-    merchantRequestID = models.CharField(max_length=100, blank=True)
-    mpesaReceiptNumber = models.CharField(max_length=100, blank=True)
+    # checkoutRequestID = models.CharField(max_length=100, blank=True, null=True, unique=True)
+    # merchantRequestID = models.CharField(max_length=100, blank=True)
+    # mpesaReceiptNumber = models.CharField(max_length=100, blank=True)
     direction = models.CharField(max_length=10, choices=TRANSACTION_DIRECTION)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES)
     rawCallback = models.JSONField(default=dict, blank=True)
     createdAt = models.DateTimeField(auto_now_add=True)
     checkoutId = models.CharField(max_length=100, unique=True, blank=True, null=True)
     mpesaCode = models.CharField(max_length=100, unique=True, blank=True, null=True)
+
+    checkout_request_id = models.CharField(max_length=100, unique=True,null=True, blank=True)
+    mpesa_receipt_number = models.CharField(max_length=50, null=True, blank=True, unique=True)
 
     def __str__(self):
         return f"MpesaTransaction {self.id} - {self.status}"

@@ -14,10 +14,14 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from .mpesa_callback import MpesaCallbackService
 import json
+import logging
 
 from rest_framework.permissions import BasePermission
 from order.utils import format_phone_number
 
+
+
+logger = logging.getLogger(__name__)
 
 class IsErrandOwnerOrBusiness(BasePermission):
     def has_object_permission(self, request, view, obj):
@@ -185,9 +189,36 @@ class InitiatePaymentAPIView(APIView):
 
         return Response(response, status=status.HTTP_200_OK)   
 
+# @csrf_exempt
+# def mpesa_callback_view(request):
+#     payload = json.loads(request.body)
+#     MpesaCallbackService().process_stk_callback(payload)
+
+#     return JsonResponse({
+#         "ResultCode": 0,
+#         "ResultDesc": "Accepted"
+#     })
+
+# @csrf_exempt
+# def mpesa_callback_view(request):
+#     try:
+#         payload = json.loads(request.body)
+#         MpesaCallbackService().process_stk_callback(payload)
+#     except Exception as e:
+#         # Log but never reject Safaricom
+#         logger.exception("M-Pesa callback processing failed")
+
+#     return JsonResponse({
+#         "ResultCode": 0,
+#         "ResultDesc": "Accepted"
+#     })
+
 @csrf_exempt
 def mpesa_callback_view(request):
     payload = json.loads(request.body)
+
+    print("MPESA CALLBACK HIT")
+    print(request.body)
     MpesaCallbackService().process_stk_callback(payload)
 
     return JsonResponse({
