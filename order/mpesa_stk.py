@@ -10,44 +10,6 @@ from .models import Errand
 from django.core.cache import cache
 
 
-
-# load_dotenv()
-
-# CONSUMER_KEY = os.getenv("CONSUMER_KEY")
-# CONSUMER_SECRET = os.getenv("CONSUMER_SECRET")
-# MPESA_PASSKEY = os.getenv("MPESA_PASSKEY")
-# MPESA_SHORTCODE = os.getenv("MPESA_SHORTCODE")
-# CALLBACK_URL = os.getenv("CALLBACK_URL")
-# MPESA_BASE_URL = os.getenv("MPESA_BASE_URL")
-
-
-# def generate_access_token():
-#     credentials = f"{CONSUMER_KEY}:{CONSUMER_SECRET}"
-#     encoded = base64.b64encode(credentials.encode()).decode()
-
-#     headers = {"Authorization": f"Basic {encoded}"}
-#     response = requests.get(
-#         f"{MPESA_BASE_URL}/oauth/v1/generate?grant_type=client_credentials",
-#         headers=headers,
-#     )
-
-#     try:
-#         data = response.json()
-#     except ValueError:
-#         # M-Pesa sometimes returns non-JSON (e.g. HTML error page) on failure
-#         raise ValueError(
-#             f"Failed to parse access token response: {response.status_code} {response.text}"
-#         )
-
-#     if "access_token" not in data:
-#         raise ValueError(
-#             f"Failed to get access token: {response.status_code} {response.text}"
-#         )
-
-#     return data["access_token"]
-
-
-
 class MpesaSTKService:
     def __init__(self):
         self.base_url = settings.MPESA_BASE_URL
@@ -160,7 +122,8 @@ class MpesaSTKService:
             mpesa_txn.save(update_fields=["status"])
             raise ValueError(f"Failed to decode M-Pesa STK push response. Status: {response.status_code}, Body: {response.text}")
 
-        mpesa_txn.checkout_request_id = data.get("checkout_request_id")
+        # mpesa_txn.checkout_request_id = data.get("checkout_request_id")
+        mpesa_txn.checkout_request_id = (data.get("CheckoutRequestID") or data.get("checkout_request_id"))
         mpesa_txn.merchantRequestID = data.get("MerchantRequestID")
         mpesa_txn.save()
 
@@ -168,6 +131,10 @@ class MpesaSTKService:
         errand.save(update_fields=["status"])
 
         return data
+    
+
+
+
 
 
     def query_status(self, checkout_id: str) -> dict:

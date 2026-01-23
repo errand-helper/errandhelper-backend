@@ -9,7 +9,7 @@ class MpesaCallbackService:
 
         try:
             callback = payload["Body"]["stkCallback"]
-            checkout_id = callback["checkout_request_id"]
+            checkout_id = callback["CheckoutRequestID"]
             result_code = callback["ResultCode"]
         except KeyError:
             raise ValueError("Invalid M-Pesa callback payload")
