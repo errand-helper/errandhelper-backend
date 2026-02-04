@@ -10,7 +10,7 @@ class MpesaCallbackService:
         try:
             callback = payload["Body"]["stkCallback"]
             checkout_id = callback["CheckoutRequestID"]
-            result_code = callback["ResultCode"]
+            result_code = str(callback["ResultCode"])
         except KeyError:
             raise ValueError("Invalid M-Pesa callback payload")
 
@@ -24,11 +24,11 @@ class MpesaCallbackService:
         if mpesa_txn.status == "success":
             return
 
-        mpesa_txn.raw_callback = payload
+        mpesa_txn.rawCallback = payload
 
-        if result_code != 0:
+        if result_code != "0":
             mpesa_txn.status = "failed"
-            mpesa_txn.save(update_fields=["status", "raw_callback"])
+            mpesa_txn.save(update_fields=["status", "rawCallback"])
             return
 
         metadata = callback.get("CallbackMetadata", {}).get("Item", [])
@@ -48,7 +48,7 @@ class MpesaCallbackService:
         mpesa_txn.amount = amount
         mpesa_txn.mpesa_receipt_number = receipt
         mpesa_txn.status = "success"
-        mpesa_txn.save()
+        mpesa_txn.save(update_fields=["amount", "mpesa_receipt_number", "status", "rawCallback"])
 
         errand = mpesa_txn.errand
 
@@ -62,8 +62,10 @@ class MpesaCallbackService:
             return
 
         # ---- Platform Wallet Hold ----
-        platform_wallet = Wallet.objects.select_for_update().get(
-            owner_type="platform"
+        platform_wallet, _ = Wallet.objects.select_for_update().get_or_create(
+            owner_type="platform",
+            owner=None,
+            defaults={"balance": 0, "locked_balance": 0},
         )
 
         WalletTransaction.objects.create(
@@ -77,8 +79,9 @@ class MpesaCallbackService:
         platform_wallet.locked_balance += amount
         platform_wallet.save(update_fields=["locked_balance"])
 
-        errand.status = "funds_held"
-        errand.save(update_fields=["status"])
+        errand.status = "held"
+        errand.paid = True
+        errand.save(update_fields=["status", "paid"])
 
 
 
@@ -152,8 +155,6 @@ class MpesaCallbackService:
 
 #         errand.status = "funds_held"
 #         errand.save(update_fields=["status"])
-
-
 
 
 

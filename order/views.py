@@ -5,7 +5,11 @@ from rest_framework import status,filters
 from rest_framework.decorators import action
 from rest_framework import viewsets, permissions
 from order.models import Errand
-from order.mpesa_stk import MpesaSTKService
+from order.mpesa_stk import (
+    MpesaSTKService,
+    PaymentAlreadyCompletedError,
+    PaymentInProgressError,
+)
 from order.serializers import ErrandListMinimalSerializer, ErrandSerializer, InitiateMpesaPaymentSerializer, OrderSerializer
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.exceptions import ValidationError
@@ -176,16 +180,49 @@ class InitiatePaymentAPIView(APIView):
         serializer = InitiateMpesaPaymentSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        errand = Errand.objects.get(id=serializer.validated_data['errand_id'])
-        phone = format_phone_number(serializer.validated_data['phone_number'])
+        try:
+            errand = Errand.objects.get(id=serializer.validated_data['errand_id'])
+        except Errand.DoesNotExist:
+            return Response(
+                {"detail": "Errand not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        try:
+            phone = format_phone_number(serializer.validated_data['phone_number'])
+        except ValueError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         amount = serializer.validated_data['amount']
 
         service = MpesaSTKService()
-        response = service.initiate_payment(
-            errand=errand,
-            phone_number=phone,
-            amount=amount,
-        )
+        try:
+            response = service.initiate_payment(
+                errand=errand,
+                phone_number=phone,
+                amount=amount,
+            )
+        except PaymentAlreadyCompletedError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_409_CONFLICT,
+            )
+        except PaymentInProgressError as exc:
+            return Response(
+                {
+                    "detail": str(exc),
+                    "checkout_request_id": exc.checkout_request_id,
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+        except ValueError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
 
         return Response(response, status=status.HTTP_200_OK)   
 
@@ -215,11 +252,25 @@ class InitiatePaymentAPIView(APIView):
 
 @csrf_exempt
 def mpesa_callback_view(request):
-    payload = json.loads(request.body)
+    if request.method != "POST":
+        return JsonResponse(
+            {"detail": "Method not allowed."},
+            status=405,
+        )
 
-    print("MPESA CALLBACK HIT")
-    print(request.body)
-    MpesaCallbackService().process_stk_callback(payload)
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        logger.exception("Invalid M-Pesa callback payload body")
+        # Always acknowledge so Safaricom does not keep retrying malformed payloads.
+        return JsonResponse({"ResultCode": 0, "ResultDesc": "Accepted"})
+
+    try:
+        MpesaCallbackService().process_stk_callback(payload)
+    except Exception:
+        logger.exception("M-Pesa callback processing failed")
+        # Always acknowledge receipt and handle retries/idempotency internally.
+        return JsonResponse({"ResultCode": 0, "ResultDesc": "Accepted"})
 
     return JsonResponse({
         "ResultCode": 0,
@@ -232,8 +283,14 @@ class STKStatusAPIView(APIView):
     def post(self, request):
         checkout_id = request.data.get("checkout_request_id")
         service = MpesaSTKService()
-        status = service.query_status(checkout_id)
-        return Response(status)
+        try:
+            payment_status = service.query_status(checkout_id)
+        except ValueError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        return Response(payment_status, status=status.HTTP_200_OK)
 
 
 

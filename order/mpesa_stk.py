@@ -1,13 +1,23 @@
 import base64
-import os
-from urllib.parse import urlparse
 
 import requests
 from django.conf import settings
+from django.db import transaction
 from django.utils import timezone
 from .models import MpesaTransaction
 from .models import Errand
+from .models import Escrow
 from django.core.cache import cache
+
+
+class PaymentAlreadyCompletedError(ValueError):
+    pass
+
+
+class PaymentInProgressError(ValueError):
+    def __init__(self, message: str, checkout_request_id: str | None = None):
+        super().__init__(message)
+        self.checkout_request_id = checkout_request_id
 
 
 class MpesaSTKService:
@@ -77,15 +87,45 @@ class MpesaSTKService:
 
 
     def initiate_payment(self, *, errand: Errand, phone_number: str, amount: float):
-        password, timestamp = self._password()
+        with transaction.atomic():
+            locked_errand = Errand.objects.select_for_update().get(id=errand.id)
 
-        mpesa_txn = MpesaTransaction.objects.create(
-            errand=errand,
-            phoneNumber=phone_number,
-            amount=amount,
-            direction="inbound",
-            status="initiated",
-        )
+            already_paid = (
+                locked_errand.paid
+                or locked_errand.status in {"held", "released"}
+                or Escrow.objects.filter(errand=locked_errand).exists()
+                or MpesaTransaction.objects.filter(
+                    errand=locked_errand,
+                    direction="inbound",
+                    status="success",
+                ).exists()
+            )
+            if already_paid:
+                raise PaymentAlreadyCompletedError(
+                    "This errand is already paid. You cannot pay twice."
+                )
+
+            active_txn = (
+                MpesaTransaction.objects
+                .filter(errand=locked_errand, direction="inbound", status="initiated")
+                .order_by("-createdAt")
+                .first()
+            )
+            if active_txn:
+                raise PaymentInProgressError(
+                    "A payment request is already in progress for this errand.",
+                    checkout_request_id=active_txn.checkout_request_id,
+                )
+
+            mpesa_txn = MpesaTransaction.objects.create(
+                errand=locked_errand,
+                phoneNumber=phone_number,
+                amount=amount,
+                direction="inbound",
+                status="initiated",
+            )
+
+        password, timestamp = self._password()
 
         payload = {
             "BusinessShortCode": self.shortcode,
@@ -97,8 +137,8 @@ class MpesaSTKService:
             "PartyB": self.shortcode,
             "PhoneNumber": phone_number,
             "CallBackURL": self.callback_url,
-            "AccountReference": errand.reference_number,
-            "TransactionDesc": f"Errand {errand.reference_number}",
+            "AccountReference": locked_errand.reference_number,
+            "TransactionDesc": f"Errand {locked_errand.reference_number}",
         }
 
         token = self._get_access_token()
@@ -122,13 +162,13 @@ class MpesaSTKService:
             mpesa_txn.save(update_fields=["status"])
             raise ValueError(f"Failed to decode M-Pesa STK push response. Status: {response.status_code}, Body: {response.text}")
 
-        # mpesa_txn.checkout_request_id = data.get("checkout_request_id")
         mpesa_txn.checkout_request_id = (data.get("CheckoutRequestID") or data.get("checkout_request_id"))
-        mpesa_txn.merchantRequestID = data.get("MerchantRequestID")
-        mpesa_txn.save()
+        # merchantRequestID was removed from the model; keep raw response for tracing.
+        mpesa_txn.rawCallback = data
+        mpesa_txn.save(update_fields=["checkout_request_id", "rawCallback"])
 
-        errand.status = "pending"
-        errand.save(update_fields=["status"])
+        locked_errand.status = "pending"
+        locked_errand.save(update_fields=["status"])
 
         return data
     
@@ -137,8 +177,69 @@ class MpesaSTKService:
 
 
 
+    def _query_remote_status(self, checkout_id: str) -> dict:
+        password, timestamp = self._password()
+        token = cache.get("mpesa_access_token") or self._get_access_token()
+
+        payload = {
+            "BusinessShortCode": self.shortcode,
+            "Password": password,
+            "Timestamp": timestamp,
+            "CheckoutRequestID": checkout_id,
+        }
+
+        try:
+            response = requests.post(
+                f"{self.base_url}/mpesa/stkpushquery/v1/query",
+                json=payload,
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Content-Type": "application/json",
+                },
+                timeout=30,
+            )
+        except requests.RequestException as e:
+            raise ValueError(f"Failed to query M-Pesa status: {str(e)}")
+
+        if not response.ok:
+            raise ValueError(
+                f"Failed to query M-Pesa status. "
+                f"Status: {response.status_code}, Body: {response.text[:500]}"
+            )
+
+        try:
+            return response.json()
+        except requests.exceptions.JSONDecodeError:
+            raise ValueError(
+                "Failed to decode M-Pesa status response. "
+                f"Status: {response.status_code}, Body: {response.text[:500]}"
+            )
+
+    def _extract_result_fields(self, raw_payload: dict | None) -> tuple[str | None, str | None]:
+        if not raw_payload:
+            return None, None
+
+        # Prefer last query payload when present.
+        query_payload = raw_payload.get("last_query_response")
+        if isinstance(query_payload, dict):
+            code = query_payload.get("ResultCode")
+            desc = query_payload.get("ResultDesc")
+            if code is not None or desc is not None:
+                return (
+                    str(code).strip() if code is not None else None,
+                    str(desc).strip() if desc is not None else None,
+                )
+
+        # Fallback to callback payload.
+        callback = raw_payload.get("Body", {}).get("stkCallback", {})
+        code = callback.get("ResultCode")
+        desc = callback.get("ResultDesc")
+        return (
+            str(code).strip() if code is not None else None,
+            str(desc).strip() if desc is not None else None,
+        )
+
     def query_status(self, checkout_id: str) -> dict:
-        
         if not checkout_id:
             return {
                 "status": "error",
@@ -146,32 +247,68 @@ class MpesaSTKService:
             }
 
         try:
-            # Use the current snake_case field name that actually exists on the model
             txn = MpesaTransaction.objects.get(checkout_request_id=checkout_id)
         except MpesaTransaction.DoesNotExist:
-            # If we don't have a matching transaction, just report not_found
             return {
                 "status": "not_found",
                 "checkout_request_id": checkout_id,
             }
 
-        checkout_request_id = getattr(txn, "checkout_request_id", None)
-        # mpesa_receipt_number = getattr(txn, "mpesa_receipt_number", None)
+        query_payload = {}
+        if txn.status == "initiated":
+            query_payload = self._query_remote_status(checkout_id)
+
+            raw_payload = txn.rawCallback or {}
+            raw_payload["last_query_response"] = query_payload
+            txn.rawCallback = raw_payload
+
+            # Query can safely conclude hard failures; success is finalized by callback.
+            result_code = str(query_payload.get("ResultCode", "")).strip()
+            if result_code and result_code != "0":
+                txn.status = "failed"
+                txn.save(update_fields=["status", "rawCallback"])
+            else:
+                txn.save(update_fields=["rawCallback"])
+
+        stored_result_code, stored_result_desc = self._extract_result_fields(txn.rawCallback)
+        result_code = (
+            str(query_payload.get("ResultCode")).strip()
+            if query_payload.get("ResultCode") is not None
+            else stored_result_code
+        )
+        result_desc = (
+            str(query_payload.get("ResultDesc")).strip()
+            if query_payload.get("ResultDesc") is not None
+            else stored_result_desc
+        )
+
+        if txn.status == "success":
+            payment_status = "success"
+        elif txn.status == "failed":
+            payment_status = "cancelled" if result_code == "1032" else "failed"
+        else:
+            payment_status = "pending"
 
         return {
-            # "status": txn.status,
-            "checkout_request_id": checkout_request_id,
-            "merchant_request_id": getattr(txn, "merchantRequestID", None),
-            # "mpesa_receipt_number": mpesa_receipt_number,
+            "status": payment_status,
+            "checkout_request_id": txn.checkout_request_id,
+            "mpesa_receipt_number": txn.mpesa_receipt_number,
             "amount": str(txn.amount),
             "direction": txn.direction,
-            "ResultCode": 0 if txn.status == "success" else 1,
+            "cancelled": payment_status == "cancelled",
+            # Kept for frontend backward compatibility.
+            "ResponseCode": "0" if payment_status == "success" else None,
+            "ResultCode": (
+                "0"
+                if payment_status == "success"
+                else result_code
+            ),
+            "ResultDesc": (
+                "The service request is processed successfully."
+                if payment_status == "success"
+                else result_desc
+            ),
         }
-
-
-
-
-
 
 
 
