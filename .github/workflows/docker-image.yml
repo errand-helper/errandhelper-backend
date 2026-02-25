@@ -4,9 +4,9 @@ on:
   workflow_call:
   workflow_dispatch:
   push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
+    branches: [ "master", "dev-server", "staging-server" ]
+  # pull_request:
+  #   branches: [ "master", "dev-server", "staging-server" ]
 
 jobs:
   test_django:
@@ -20,68 +20,68 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Build Docker container
+    - name: Set version and branch tag
       run: |
-        docker build \
-          -t "${{ secrets.IMAGE_NAME }}:$(echo ${{ github.sha }} | cut -c1-7)" \
-          -t "${{ secrets.IMAGE_NAME }}:latest" \
-          .
-    - name: Login to Docker Hub
-      run: |
-        echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
-    - name: Push Docker images
-      run: |
-        docker push "${{ secrets.IMAGE_NAME }}:$(echo ${{ github.sha }} | cut -c1-7)"
-        docker push "${{ secrets.IMAGE_NAME }}:latest"
-    # Uncomment the following lines if you want to set specific tags based on branch names or versions
-    # - name: Set up Docker Buildx
-    #   uses: docker/setup-buildx-action@v2
-    #   with:
-    #     buildkitd-flags: --allow-insecure-entitlement security.insecure
-    #     install: true
-    #     driver-opts: image=moby/buildkit:latest
-    # - name: Set up Docker QEMU
-    #   uses: docker/setup-qemu-action@v2
-    #   with:
-    #     platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/ppc64le,linux/s390x
-    # - name: Set up Docker Buildx
-    #   uses: docker/setup-buildx-action@v2
-    #   with:
-    #     buildkitd-flags: --allow-insecure-entitlement security.insecure
-    #     install: true
-    #     driver-opts: image=moby/buildkit:latest
-    # - name: Set up Docker Buildx cache
-    #   uses: docker/cache-action@v2
-    #   with:
-    #     cache-from: type=registry,ref=${{ secrets.IMAGE_NAME }}:cache
-    #     cache-to: type=registry,ref=${{ secrets.IMAGE_NAME }}:cache,mode=max
-    #     buildx: true
-    # - name: Set up Docker Buildx
+        echo "GIT_COMMIT_SHA=${{ github.sha }}" >> $GITHUB_ENV
+        echo "VERSION=v1.${{ github.run_number }}" >> $GITHUB_ENV
 
-    # - name: Set Docker image tags
-    #   run: |
-    #     BRANCH_NAME="${{ github.ref_name }}"
-    #     echo "BRANCH_NAME=${BRANCH_NAME}" >> $GITHUB_ENV
-    #     echo "VERSION=v1.${{ github.run_number }}" >> $GITHUB_ENV
+        # Sanitize current branch name (lowercase + replace slashes)
+        CURRENT_BRANCH="${{ github.ref_name }}"
+        SAFE_BRANCH=$(echo "$CURRENT_BRANCH" | tr '[:upper:]' '[:lower:]' | tr '/' '-')
 
-    # - name: Sanitize branch name for Docker tag
-    #   run: echo "SANITIZED_BRANCH_NAME=${BRANCH_NAME//\//-}" >> $GITHUB_ENV
+        # Detect if this is a PR merge
+        if [[ -n "${GITHUB_HEAD_REF}" ]]; then
+          # GITHUB_HEAD_REF = source branch name (e.g. 19-merge)
+          SOURCE_BRANCH="${GITHUB_HEAD_REF}"
+          SAFE_SOURCE=$(echo "$SOURCE_BRANCH" | tr '[:upper:]' '[:lower:]' | tr '/' '-')
 
-    # - name: Build the Docker image
+          # Combine both based on target branch
+          if [[ "$SAFE_BRANCH" == "main" ]]; then
+            TAG="${SAFE_SOURCE}-main"
+          else
+            TAG="${SAFE_BRANCH}-${SAFE_SOURCE}"
+          fi
+        else
+          # Direct push → just use branch name
+          TAG="$SAFE_BRANCH"
+        fi
+
+        echo "BRANCH_TAG=$TAG" >> $GITHUB_ENV
+        echo "✅ Using BRANCH_TAG: $TAG"
+
+
+    # - name: Build Docker container
     #   run: |
     #     docker build \
-    #       -t "${{ secrets.IMAGE_NAME }}:${{ env.SANITIZED_BRANCH_NAME }}_${{ env.VERSION }}"  .
+    #       -t "${{ secrets.IMAGE_NAME }}:$(echo ${{ github.sha }} | cut -c1-7)" \
+    #       -t "${{ secrets.IMAGE_NAME }}:latest" \
+    #       .
 
-  
-    # - name: Push Docker images
+    - name: Build Docker image
+      run: |
+        docker build -t "${{ secrets.IMAGE_NAME }}:${BRANCH_TAG}" -t "${{ secrets.IMAGE_NAME }}:${GIT_COMMIT_SHA}" .
+
+    - name: Login and Push Docker image
+      env:
+        DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+        DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN }}
+        IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
+        BRANCH_TAG: ${{ env.BRANCH_TAG }}
+        GIT_COMMIT_SHA: ${{ env.GIT_COMMIT_SHA }}
+      run: |
+        echo "$DOCKER_HUB_TOKEN" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin docker.io
+
+        echo "✅ Logged in successfully, pushing images..."
+        docker push "$IMAGE_NAME:$BRANCH_TAG"
+        docker push "$IMAGE_NAME:$GIT_COMMIT_SHA"
+
+
+
+    # - name: Login to Docker Hub
     #   run: |
     #     echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
-    #     docker push "${{ secrets.IMAGE_NAME }}:${{ env.BRANCH_NAME }}_${{ env.VERSION }}"
-
-
+    # - name: Push Docker images
+    #   run: |
+    #     docker push "${{ secrets.IMAGE_NAME }}:$(echo ${{ github.sha }} | cut -c1-7)"
+    #     docker push "${{ secrets.IMAGE_NAME }}:latest"
    
-
-
-
-
-
