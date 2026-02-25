@@ -1,5 +1,5 @@
 from django.urls import path,include
-from order.views import  ErrandViewSet, InitiatePaymentAPIView, OrderView,ErrandMinimalViewSet, STKStatusAPIView, mpesa_callback_view
+from order.views import  ErrandViewSet, InitiatePaymentAPIView, OrderView,ErrandMinimalViewSet, STKStatusAPIView, ReleaseEscrowAPIView, mpesa_callback_view
 from . import views
 from rest_framework.routers import DefaultRouter
 
@@ -22,8 +22,8 @@ urlpatterns = [
     path('create-order/<uuid:business_id>/', OrderView.as_view(), name='create-order'),  # If using the business_id approach
     # path('order/<uuid:pk>/', OrderDetailView.as_view(), name='order-detail')
 
-    # # Escrow / payouts
-    # path("escrow/release/", ReleaseEscrowAPIView.as_view()),
+    # Escrow / payouts
+    path("escrow/release/", ReleaseEscrowAPIView.as_view(), name="escrow-release"),
     # path("payouts/", PayoutListAPIView.as_view()),
 
     # # Disputes

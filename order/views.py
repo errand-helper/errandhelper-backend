@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status,filters
 from rest_framework.decorators import action
 from rest_framework import viewsets, permissions
-from order.models import Errand
+from order.models import Errand, Escrow
 from order.mpesa_stk import (
     MpesaSTKService,
     PaymentAlreadyCompletedError,
@@ -16,7 +16,9 @@ from rest_framework.exceptions import ValidationError
 
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
+from django.utils import timezone
 from .mpesa_callback import MpesaCallbackService
+from .payments.escrow_release import EscrowReleaseService
 import json
 import logging
 
@@ -132,7 +134,8 @@ class ErrandViewSet(viewsets.ModelViewSet):
                             status=status.HTTP_400_BAD_REQUEST)
 
         errand.status = 'completed'
-        errand.save()
+        errand.completed_at = timezone.now()
+        errand.save(update_fields=["status", "completed_at"])
         return Response({'success': 'You have successfully completed the errand.'}, status=status.HTTP_200_OK)
 
     # ✅ Cancel errand (client only)
@@ -291,6 +294,47 @@ class STKStatusAPIView(APIView):
                 status=status.HTTP_502_BAD_GATEWAY,
             )
         return Response(payment_status, status=status.HTTP_200_OK)
+
+
+class ReleaseEscrowAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        errand_id = request.data.get("errand_id")
+        if not errand_id:
+            return Response(
+                {"detail": "errand_id is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            errand = Errand.objects.get(id=errand_id)
+        except Errand.DoesNotExist:
+            return Response(
+                {"detail": "Errand not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        service = EscrowReleaseService()
+        try:
+            result = service.release(errand=errand, actor=request.user)
+        except PermissionError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        except Escrow.DoesNotExist:
+            return Response(
+                {"detail": "No escrow found for this errand."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except ValueError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(result, status=status.HTTP_200_OK)
 
 
 

@@ -83,6 +83,7 @@ class Errand(models.Model):
     )
 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='unpaid')
+    completed_at = models.DateTimeField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -245,7 +246,6 @@ class WalletTransaction(models.Model):
     reference = models.CharField(max_length=100, unique=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
-
 
 
 
