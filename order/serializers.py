@@ -10,6 +10,8 @@ import boto3
 from django.conf import settings
 import base64
 import uuid
+from rest_framework import serializers
+from .models import Dispute, Escrow, MpesaTransaction, Payout, Wallet, WalletTransaction
 
 
 def get_s3_client():
@@ -168,8 +170,83 @@ class ErrandListMinimalSerializer(serializers.ModelSerializer):
 
 
 
+class MpesaTransactionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MpesaTransaction
+        fields = [
+            'id',
+            'errand',
+            'phoneNumber',
+            'amount',
+            # 'merchantRequestID',
+            # 'mpesaReceiptNumber',
+            'direction',
+            'status',
+            # 'rawCallback',
+            'createdAt',
+        ]
+        read_only_fields = [
+            'id',
+            'status',
+            # 'mpesaReceiptNumber',
+            # 'checkoutRequestID',
+            # 'rawCallback',
+            'createdAt',
+        ]
 
 
+class EscrowSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Escrow
+        fields = '__all__'
+        read_only_fields = ['id', 'status', 'heldAt', 'releasedAt']
+
+
+class WalletSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Wallet
+        fields = [
+            'id',
+            'owner_type',
+            'owner',
+            'balance',
+            'locked_balance',
+            'created_at',
+        ]
+        read_only_fields = fields
+
+
+class WalletTransactionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WalletTransaction
+        fields = '__all__'
+        read_only_fields = fields
+
+
+class PayoutSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Payout
+        fields = '__all__'
+        read_only_fields = ['id', 'created_at']
+
+
+
+class DisputeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Dispute
+        fields = '__all__'
+        read_only_fields = ['id', 'status', 'created_at']
+
+
+class InitiateMpesaPaymentSerializer(serializers.Serializer):
+    errand_id = serializers.UUIDField()
+    phone_number = serializers.CharField()
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+
+    def validate_amount(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Amount must be greater than zero.")
+        return value
 
 
 
@@ -273,149 +350,3 @@ class OrderSerializer(serializers.ModelSerializer):
         }
 
 
-
-# class InstructionSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Instruction
-#         fields = ['complete','instruction']
-
-
-# # serializers.py
-
-# class OrderSerializer(serializers.ModelSerializer):
-#     instructions = InstructionSerializer(many=True)
-#     user_details = serializers.SerializerMethodField(read_only=True)
-#     business_details = serializers.SerializerMethodField(read_only=True)
-#     services_details = serializers.SerializerMethodField(read_only=True)
-
-#     location = LocationSerializer()
-#     activity_time = ActivityTimeSerializer()
-
-#     class Meta:
-#         model = Order
-#         fields = [
-#             'id', 'reference_number', 'instructions', 'completed', 'accepted', 
-#             'payment', 'paid', 'business', 'services', 'user', 
-#             'location', 'activity_time', 'services_details', 'order_status','user_details','business_details'
-#         ]
-#         read_only_fields = ['id', 'reference_number']
-
-#     def create(self, validated_data):
-#         request = self.context.get('request')
-
-#         user_instance = request.user if request else None
-#         business_instance = self.context.get('business_instance')
-
-#         # Remove business and user from validated_data as they are handled separately
-#         validated_data.pop('business', None)
-#         validated_data.pop('user', None)
-
-#         location_data = validated_data.pop('location')
-#         activity_time_data = validated_data.pop('activity_time')
-#         services_data = validated_data.pop('services', None)
-#         instructions_data = validated_data.pop('instructions', None)
-
-#         # Create related instances
-#         location_instance = Location.objects.create(**location_data)
-#         activity_time_instance = ActivityTime.objects.create(**activity_time_data)
-        
-#         # Create order instance
-#         order = Order.objects.create(
-#             user=user_instance,
-#             business=business_instance,
-#             location=location_instance,
-#             activity_time=activity_time_instance,
-#             **validated_data
-#         )
-
-#         # Create instructions
-#         for instruction_data in instructions_data:
-#             Instruction.objects.create(order=order, **instruction_data)
-
-#         # Set services for order
-#         if services_data:
-#             order.services.set(services_data)
-
-#         return order
-
-#     def get_services_details(self, obj):
-#         return {
-#             'user_id': obj.user.id
-#         }
-    
-#     def get_business_details(self, obj):
-#         return {
-#             'business_id': obj.business.id
-#         }
-
-
-# class OrderSerializer(serializers.ModelSerializer):
-#     id = serializers.UUIDField(read_only=True)
-#     instructions = InstructionSerializer(many=True)
-#     completed = serializers.BooleanField()
-#     accepted = serializers.BooleanField()
-#     paid = serializers.BooleanField()
-#     payment = serializers.CharField()
-#     services = serializers.PrimaryKeyRelatedField(many=True,queryset=Service.objects.all(),required=False)
-
-#     user_details = serializers.SerializerMethodField(read_only=True)
-#     business_details = serializers.SerializerMethodField(read_only=True)
-#     service_details = serializers.SerializerMethodField(read_only=True)
-
-#     location = LocationSerializer()
-#     activity_time = ActivityTimeSerializer()
-#     reference_number = serializers.CharField(max_length=200)
-#     order_status = serializers.CharField(max_length=200)
-
-#     # order_status =
-#     # reference_number
-
-#     class Meta:
-#         model = Order
-#         fields = [
-#             'id', 'reference_number', 'instructions', 'completed', 'accepted', 
-#             'payment', 'paid', 'services','location', 'activity_time', 'order_status','user_details','service_details','business_details'
-#         ]
-
-    
-#     def create(self,validated_data):
-#         request = self.context.get('request')
-
-#         user_instance = request.user if request else None
-#         business_instance = self.context.get('business_instance')
-
-#         validated_data.pop('business',None)
-#         validated_data.pop('user',None)
-
-#         location_data = validated_data.pop('location')
-#         activity_time_data = validated_data.pop('activity_time')
-#         services_data = validated_data.pop('services',None)
-#         instructions_data = validated_data.pop('instructions',None)
-
-#         location_instance = Location.objects.create(**location_data)
-#         activity_time_instance = ActivityTime.objects.create(**activity_time_data)
-#         order = Order.objects.create(
-#             user=user_instance,
-#             business=business_instance,
-#             location=location_instance,
-#             activity_time=activity_time_instance,
-#             **validated_data
-#             )
-        
-#         for instructions_data in instructions_data:
-#             Instruction.objects.create(order=order,**instructions_data)
-
-#         if services_data:
-#             order.services.set(services_data)
-#         return order
-    
-
-#     def get_services_data(self,obj):
-#         return {
-#             'user_id':obj.user.id
-#         }
-    
-#     def get_business_details(self,obj):
-#         return {
-#             'business_id':obj.business.id
-#         }

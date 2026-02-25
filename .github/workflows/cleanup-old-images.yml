@@ -1,0 +1,84 @@
+name: Cleanup old Docker tags
+
+on:
+  schedule:
+    - cron: "0 3 * * *"  # Every day at 3 AM UTC
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+
+    env:
+      DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+      DOCKER_HUB_PASSWORD: ${{ secrets.DOCKER_HUB_TOKEN }}
+      MAX_AGE_DAYS: 7
+      MIN_KEEP: 5
+      TAG_FILTER: "^dev-server|^staging-"
+      REPO_NAME: motieno205/errandhelper-backend
+
+    steps:
+    - name: Install jq
+      run: sudo apt-get update && sudo apt-get install -y jq
+
+    - name: Cleanup old tags
+      run: |
+        echo "${DOCKER_HUB_PASSWORD}" | docker login -u "${DOCKER_HUB_USERNAME}" --password-stdin
+
+        PAGE=1
+        TAGS=()
+
+        while true; do
+          RESPONSE=$(curl -s -u "${DOCKER_HUB_USERNAME}:${DOCKER_HUB_PASSWORD}" \
+            "https://hub.docker.com/v2/repositories/${DOCKER_HUB_USERNAME}/${REPO_NAME}/tags/?page_size=100&page=${PAGE}")
+          
+          PAGE_TAGS=$(echo "$RESPONSE" | jq -r '.results[] | "\(.name) \(.last_updated)"')
+          
+          [[ -z "$PAGE_TAGS" ]] && break
+
+          while IFS= read -r line; do
+            TAG=$(echo "$line" | awk '{print $1}')
+            DATE=$(echo "$line" | awk '{print $2}')
+            TAGS+=("${TAG} ${DATE}")
+          done <<< "$PAGE_TAGS"
+
+          PAGE=$((PAGE + 1))
+        done
+
+        NOW=$(date +%s)
+        MATCHED_TAGS=()
+
+        for entry in "${TAGS[@]}"; do
+          TAG=$(echo "$entry" | cut -d' ' -f1)
+          DATE=$(echo "$entry" | cut -d' ' -f2)
+
+          [[ "$TAG" =~ $TAG_FILTER ]] || continue
+          [[ "$TAG" == "latest" ]] && continue
+
+          TIMESTAMP=$(date -d "$DATE" +%s || date -jf "%Y-%m-%dT%H:%M:%S" "$DATE" +%s)
+          AGE_DAYS=$(( (NOW - TIMESTAMP) / 86400 ))
+
+          MATCHED_TAGS+=("${TIMESTAMP}|${TAG}|${AGE_DAYS}")
+        done
+
+        IFS=$'\n' SORTED_TAGS=($(sort -r <<<"${MATCHED_TAGS[*]}"))
+
+        COUNT=0
+        for entry in "${SORTED_TAGS[@]}"; do
+          TAG=$(cut -d'|' -f2 <<< "$entry")
+          AGE_DAYS=$(cut -d'|' -f3 <<< "$entry")
+
+          COUNT=$((COUNT + 1))
+          if [ "$COUNT" -le "$MIN_KEEP" ]; then
+            echo "Keeping recent tag: $TAG (Age: $AGE_DAYS days)"
+            continue
+          fi
+
+          if [ "$AGE_DAYS" -gt "$MAX_AGE_DAYS" ]; then
+            echo "Deleting old tag: $TAG (Age: $AGE_DAYS days)"
+            curl -s -X DELETE -u "${DOCKER_HUB_USERNAME}:${DOCKER_HUB_PASSWORD}" \
+              "https://hub.docker.com/v2/repositories/${DOCKER_HUB_USERNAME}/${REPO_NAME}/tags/${TAG}/"
+          else
+            echo "Keeping not-so-old tag: $TAG (Age: $AGE_DAYS days)"
+          fi
+        done

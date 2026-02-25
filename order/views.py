@@ -1,17 +1,33 @@
-from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status,filters
 from rest_framework.decorators import action
 from rest_framework import viewsets, permissions
-from order.models import Errand
-from order.serializers import ErrandListMinimalSerializer, ErrandSerializer, OrderSerializer
+from order.models import Errand, Escrow
+from order.mpesa_stk import (
+    MpesaSTKService,
+    PaymentAlreadyCompletedError,
+    PaymentInProgressError,
+)
+from order.serializers import ErrandListMinimalSerializer, ErrandSerializer, InitiateMpesaPaymentSerializer, OrderSerializer
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.exceptions import ValidationError
 
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from django.utils import timezone
+from .mpesa_callback import MpesaCallbackService
+from .payments.escrow_release import EscrowReleaseService
+import json
+import logging
 
 from rest_framework.permissions import BasePermission
+from order.utils import format_phone_number
+
+
+
+logger = logging.getLogger(__name__)
 
 class IsErrandOwnerOrBusiness(BasePermission):
     def has_object_permission(self, request, view, obj):
@@ -19,8 +35,6 @@ class IsErrandOwnerOrBusiness(BasePermission):
             obj.client == request.user or
             obj.business == request.user
         )
-
-
 
 
 # Create your views here.
@@ -120,7 +134,8 @@ class ErrandViewSet(viewsets.ModelViewSet):
                             status=status.HTTP_400_BAD_REQUEST)
 
         errand.status = 'completed'
-        errand.save()
+        errand.completed_at = timezone.now()
+        errand.save(update_fields=["status", "completed_at"])
         return Response({'success': 'You have successfully completed the errand.'}, status=status.HTTP_200_OK)
 
     # ✅ Cancel errand (client only)
@@ -138,10 +153,7 @@ class ErrandViewSet(viewsets.ModelViewSet):
         errand.status = 'cancelled'
         errand.save()
         return Response({'success': 'You have successfully cancelled the errand.'}, status=status.HTTP_200_OK)
-
-
     
-
 
 class ErrandMinimalViewSet(viewsets.ModelViewSet):
     serializer_class = ErrandListMinimalSerializer
@@ -162,13 +174,167 @@ class ErrandMinimalViewSet(viewsets.ModelViewSet):
 
         # always return latest first
         return queryset.order_by('-created_at')
-
     
 
 
 
+class InitiatePaymentAPIView(APIView):
+    def post(self, request):
+        serializer = InitiateMpesaPaymentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            errand = Errand.objects.get(id=serializer.validated_data['errand_id'])
+        except Errand.DoesNotExist:
+            return Response(
+                {"detail": "Errand not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        try:
+            phone = format_phone_number(serializer.validated_data['phone_number'])
+        except ValueError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        amount = serializer.validated_data['amount']
+
+        service = MpesaSTKService()
+        try:
+            response = service.initiate_payment(
+                errand=errand,
+                phone_number=phone,
+                amount=amount,
+            )
+        except PaymentAlreadyCompletedError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_409_CONFLICT,
+            )
+        except PaymentInProgressError as exc:
+            return Response(
+                {
+                    "detail": str(exc),
+                    "checkout_request_id": exc.checkout_request_id,
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+        except ValueError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        return Response(response, status=status.HTTP_200_OK)   
+
+# @csrf_exempt
+# def mpesa_callback_view(request):
+#     payload = json.loads(request.body)
+#     MpesaCallbackService().process_stk_callback(payload)
+
+#     return JsonResponse({
+#         "ResultCode": 0,
+#         "ResultDesc": "Accepted"
+#     })
+
+# @csrf_exempt
+# def mpesa_callback_view(request):
+#     try:
+#         payload = json.loads(request.body)
+#         MpesaCallbackService().process_stk_callback(payload)
+#     except Exception as e:
+#         # Log but never reject Safaricom
+#         logger.exception("M-Pesa callback processing failed")
+
+#     return JsonResponse({
+#         "ResultCode": 0,
+#         "ResultDesc": "Accepted"
+#     })
+
+@csrf_exempt
+def mpesa_callback_view(request):
+    if request.method != "POST":
+        return JsonResponse(
+            {"detail": "Method not allowed."},
+            status=405,
+        )
+
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        logger.exception("Invalid M-Pesa callback payload body")
+        # Always acknowledge so Safaricom does not keep retrying malformed payloads.
+        return JsonResponse({"ResultCode": 0, "ResultDesc": "Accepted"})
+
+    try:
+        MpesaCallbackService().process_stk_callback(payload)
+    except Exception:
+        logger.exception("M-Pesa callback processing failed")
+        # Always acknowledge receipt and handle retries/idempotency internally.
+        return JsonResponse({"ResultCode": 0, "ResultDesc": "Accepted"})
+
+    return JsonResponse({
+        "ResultCode": 0,
+        "ResultDesc": "Accepted"
+    })
 
 
+
+class STKStatusAPIView(APIView):
+    def post(self, request):
+        checkout_id = request.data.get("checkout_request_id")
+        service = MpesaSTKService()
+        try:
+            payment_status = service.query_status(checkout_id)
+        except ValueError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        return Response(payment_status, status=status.HTTP_200_OK)
+
+
+class ReleaseEscrowAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        errand_id = request.data.get("errand_id")
+        if not errand_id:
+            return Response(
+                {"detail": "errand_id is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            errand = Errand.objects.get(id=errand_id)
+        except Errand.DoesNotExist:
+            return Response(
+                {"detail": "Errand not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        service = EscrowReleaseService()
+        try:
+            result = service.release(errand=errand, actor=request.user)
+        except PermissionError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        except Escrow.DoesNotExist:
+            return Response(
+                {"detail": "No escrow found for this errand."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except ValueError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(result, status=status.HTTP_200_OK)
 
 
 
