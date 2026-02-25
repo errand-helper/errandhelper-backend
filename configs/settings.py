@@ -13,11 +13,10 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 import os
 from pathlib import Path
 from datetime import timedelta
-from django.conf import settings
 from dotenv import load_dotenv
 
 # Load environment variables - Docker will use env files specified in docker-compose.yaml
-load_dotenv('.env.local')
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -27,14 +26,23 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
+# SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
+SECRET_KEY= os.environ.get("DJANGO_SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
+# DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
+DEBUG = str(os.environ.get('DEBUG')) == "1"
+
 
 ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS","127.0.0.1").split(",")
 
-CSRF_TRUSTED_ORIGINS = os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS","https://127.0.0.1").split(",")
+# Add testserver for Django tests
+if "testserver" not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append("testserver")
+
+CSRF_TRUSTED_ORIGINS = os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS","http://127.0.0.1",).split(",")
+
+USE_S3 = os.getenv("USE_S3", "False").lower() == "true"
 
 
 CORS_ORIGIN_ALLOW_ALL = True  # Or use CORS_ORIGIN_WHITELIST for specific origins
@@ -55,9 +63,12 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    'django_filters',
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
+    'channels',
+    # 'storages',
 
     'authentication',
     'business',
@@ -65,8 +76,20 @@ INSTALLED_APPS = [
     'service',
     'order',
     'media_location',
-    'business_profile'
+    'chat',
 ]
+
+if USE_S3:
+    USE_S3 = os.getenv("USE_S3") == "true"
+
+if USE_S3:
+    AWS_S3_REGION_NAME = os.getenv("AWS_REGION")
+    AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME")
+    INSTALLED_APPS += ["storages"]
+
+#     # if "storages" not in INSTALLED_APPS:
+#     INSTALLED_APPS += ["storages"]
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -98,32 +121,73 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'configs.wsgi.application'
+ASGI_APPLICATION = 'configs.asgi.application'
 
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
+# DATABASES = {
+#      'default': {
+#          'ENGINE': 'django.db.backends.{}'.format(
+#              os.getenv('DATABASE_ENGINE', 'sqlite3')
+#          ),
+#          'NAME': os.getenv('DATABASE_NAME'),
+#          'USER': os.getenv('DATABASE_USER'),
+#          'PASSWORD': os.getenv('DATABASE_PASSWORD'),
+#          'HOST': os.getenv('DATABASE_HOST', '127.0.0.1'),
+#          'PORT': os.getenv('DATABASE_PORT', 5432),
+#      }
+# }
+
+
 DATABASES = {
-     'default': {
-         'ENGINE': 'django.db.backends.{}'.format(
-             os.getenv('DATABASE_ENGINE', 'sqlite3')
-         ),
-         'NAME': os.getenv('DATABASE_NAME'),
-         'USER': os.getenv('DATABASE_USER'),
-         'PASSWORD': os.getenv('DATABASE_PASSWORD'),
-         'HOST': os.getenv('DATABASE_HOST', '127.0.0.1'),
-         'PORT': os.getenv('DATABASE_PORT', 5432),
-     }
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
 }
 
+DB_USERNAME = os.environ.get("POSTGRES_USER")
+DB_PASSWORD = os.environ.get("POSTGRES_PASSWORD")
+DB_DATABASE = os.environ.get("POSTGRES_DB")
+DB_HOST = os.environ.get("POSTGRES_HOST")
+DB_PORT = os.environ.get("POSTGRES_PORT")
+DB_IS_AVAIL = all([
+    DB_USERNAME,
+    DB_PASSWORD,
+    DB_DATABASE,
+    DB_HOST,
+    DB_PORT
+])
 
+# POSTGRES_READY=str(os.environ.get('POSTGRES_READY')) == "1"
 
+DB_IGNORE_SSL=os.environ.get("DB_IGNORE_SSL") == "true"
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
+if DB_IS_AVAIL:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": DB_DATABASE,
+            "USER": DB_USERNAME,
+            "PASSWORD": DB_PASSWORD,
+            "HOST": DB_HOST,
+            "PORT": DB_PORT,
+        }
+    }
+    # Only require SSL if explicitly requested (for production)
+    if not DB_IGNORE_SSL and os.environ.get("REQUIRE_SSL") == "true":
+         DATABASES["default"]["OPTIONS"] = {
+            "sslmode": "require"
+         }
+    else:
+        # For local development, disable SSL
+        DATABASES["default"]["OPTIONS"] = {
+            "sslmode": "disable"
+        }
+
+# print(DATABASES)
+
 
 
 # Password validation
@@ -160,8 +224,12 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+
 
 
 # Default primary key field type
@@ -177,7 +245,14 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticatedOrReadOnly"
-    ]
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',  
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter'
+    ],
 }
 
 
@@ -191,7 +266,7 @@ SIMPLE_JWT = {
     "UPDATE_LAST_LOGIN": False,
 
     "ALGORITHM": "HS256",
-    "SIGNING_KEY": settings.SECRET_KEY,
+    "SIGNING_KEY": SECRET_KEY,
     # "VERIFYING_KEY": "",
     # "AUDIENCE": None,
     # "ISSUER": None,
@@ -222,3 +297,62 @@ SIMPLE_JWT = {
     # "SLIDING_TOKEN_OBTAIN_SERIALIZER": "rest_framework_simplejwt.serializers.TokenObtainSlidingSerializer",
     # "SLIDING_TOKEN_REFRESH_SERIALIZER": "rest_framework_simplejwt.serializers.TokenRefreshSlidingSerializer",
 }
+
+# Channels configuration
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+"hosts": [(os.environ.get('REDIS_HOST', 'localhost'), int(os.environ.get('REDIS_PORT', 6379)))],
+        },
+    },
+}
+
+
+STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        "OPTIONS": {},
+    },
+}
+
+
+
+
+
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "")
+AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME", "")
+AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "")
+AWS_S3_SIGNATURE_VERSION = "s3v4"
+AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
+
+AWS_S3_FILE_OVERWRITE = False
+
+# AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
+
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": os.environ.get("REDIS_URL", "redis://127.0.0.1:6379/1"),
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            # Avoid crashing the app if Redis is down (acts like Dummy cache)
+            "IGNORE_EXCEPTIONS": True,
+        }
+    }
+}
+
+
+# Optional: This is to ensure Django sessions are stored in Redis
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+SESSION_CACHE_ALIAS = 'default'
+
+# M-Pesa Configuration
+MPESA_BASE_URL = os.getenv("MPESA_BASE_URL", "")
+MPESA_SHORTCODE = os.getenv("MPESA_SHORTCODE", "")
+MPESA_PASSKEY = os.getenv("MPESA_PASSKEY", "")
+CALLBACK_URL = os.getenv("MPESA_CALLBACK_URL", "")
+CONSUMER_KEY = os.getenv("MPESA_CONSUMER_KEY", "")
+CONSUMER_SECRET = os.getenv("MPESA_CONSUMER_SECRET", "")

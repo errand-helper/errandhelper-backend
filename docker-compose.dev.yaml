@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  # Override HTTP server for development
+  errandhelper:
+    command: python manage.py runserver 0.0.0.0:8000
+    environment:
+      - DEBUG=True
+    volumes:
+      - .:/app
+    stdin_open: true
+    tty: true
+
+  # Override WebSocket server for development  
+  errandhelper-websocket:
+    command: python -m daphne --bind 0.0.0.0 --port 8002 --reload configs.asgi:application
+    environment:
+      - DEBUG=True
+    volumes:
+      - .:/app
+    stdin_open: true
+    tty: true
+
+  # Override admin-proxy for development
+  admin-proxy:
+    ports:
+      - "8080:80"  # Use different port for dev to avoid conflicts

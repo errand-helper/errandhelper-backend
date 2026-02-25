@@ -16,3 +16,7 @@ class Location(models.Model):
     town = models.CharField(max_length=200,blank=True)
     location = models.CharField(max_length=200,blank=True)
     city = models.CharField(max_length=200,blank=True)
+
+    def __str__(self):
+        parts = [self.address, self.town, self.city]
+        return ", ".join(filter(None, parts)) or "Unnamed Location"
